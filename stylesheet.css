@@ -1,0 +1,27 @@
+@page {
+  margin: 1.5cm;
+  background: black;
+
+}
+body {
+	border-collapse: collapse;
+	background: black;
+	color:white;
+	border-color: black;
+	/*border-style: solid;*/
+	/*border-width: 2cm 3cm;*/
+	bottom: 0;
+	font-size: 18pt;
+	/*margin: 0 -3cm;*/
+	width: auto;
+	font-family: "Karla",Tahoma,sans-serif !important;
+	/*font-family: sans-serif;*/
+}
+p {
+	font-family: "Karla",Tahoma,sans-serif;
+	/*font-family: sans-serif;*/
+}
+.new-chapter {
+	padding-top: 1cm;
+	font-family: Georgia, serif;
+}
