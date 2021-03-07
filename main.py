@@ -3,28 +3,29 @@ import time
 import os
 import urllib.request
 import re
+import html
 	
 from pathvalidate import sanitize_filename
 sites = ["WuxiaWorld", "IsekaiLunatic"]
 
 DEBUG = False
 
-def generate(body_html, title):
+def generate(body_html, title, ftype="pdf"):
 	
-	# raise Exception("NOT IMPLEMENTED")
 	out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
 	tmp = body_html
 	out += re.sub(r'(Next Chapter)|(Previous Chapter)', '', tmp)
 	out += "</html>"
+	
 
-	if DEBUG:
-		with open(f"test/{title}.html", "w", encoding="utf-8") as file:
-			file.write(out)
-		os.system(f"weasyprint -s stylesheet.css \"test/{title}.html\" test/\"out.pdf\" ")
-	else:
+	if ftype == "pdf":
 		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
 			file.write(out)
 		os.system(f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{title}.pdf\" ")
+	if ftype == "epub":
+		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
+			file.write(out)
+
 	# HTML(string=out).write_pdf( f"{title}.pdf")
 	
 	print("Generated File!")
@@ -58,22 +59,25 @@ def load_site(url=""):
 		f.close()
 
 	# print (type (ret))
-	return ret
+	return ret.replace(r"&nbsp;", " ")
 
 
 def san(string):
-	no_q = string.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","\"").replace(u"\u201d", "\"")
-	return re.sub(r'(?=[^\w\-_\. \'"\[\]\(\)\?\<\>…\/,\%\$\#\!\~])(?=^"\n")', ' ',no_q)
+	no_q = html.escape(string).replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","\"").replace(u"\u201d", "\"")
+	# return re.sub(r'(?=[^\w\-_\. \[\]\(\)\?\<\>…\/,\%\$\#\!\~])(?=^"\n")', ' ',no_q)
+	# return html.escape(html.unescape(string))
+	# return string
+	return no_q
 
 
 
 
 class WuxiaWorld(HTMLParser):
-	def __init__(self, convert_charrefs=False):
+	def __init__(self, convert_charrefs=True):
 		super().__init__(convert_charrefs=convert_charrefs)
 		self.bad_tag = False
 		self.content = False
-		self.out = "<div>"
+		self.out = ""
 		self.rawdata = ""
 		self.link_store = None
 		self.next_cptr_url = None
@@ -81,6 +85,7 @@ class WuxiaWorld(HTMLParser):
 		self.islink = False
 		self.cptr_title = ""
 		self.istitle = False
+		self.isitalicstyle = False
 		
 
 
@@ -90,6 +95,13 @@ class WuxiaWorld(HTMLParser):
 
 		if self.content and tag in ("p", "i", "b", "em"):
 			self.out += f"<{tag}>"
+
+		if self.content and tag == "span":
+			style_tag = [v for i, v in enumerate(attrs) if v[0] == "style"][0][1]
+			if re.search(r"font-style: ?italic", style_tag):
+				self.out += "<em>"
+				self.isitalicstyle = True
+
 
 		if ("id","chapter-content") in attrs:
 			self.content = True
@@ -119,6 +131,10 @@ class WuxiaWorld(HTMLParser):
 			if tag == "p":
 				self.out += "\n\n"
 
+		if self.isitalicstyle and tag == "span":
+			self.out += "</em>"
+			self.isitalicstyle = False
+
 
 		if self.islink:
 			self.islink = False
@@ -147,8 +163,11 @@ class WuxiaWorld(HTMLParser):
 				print(f"weird link found [{data}]({self.link_store})")
 				self.link_store = None
 
+		# generates title - needs to acocunt for different styles
 		if self.istitle:
 			self.cptr_title = data.split(" - ")[1:3]
+			if len(data.split(" - ")) < 4:
+				self.cptr_title = re.split(r"( - )|(\. )", data)[3:7:3]
 			self.cptr_title = ' - '.join(self.cptr_title)
 
 
