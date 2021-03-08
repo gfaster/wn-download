@@ -93,7 +93,7 @@ class WuxiaWorld(HTMLParser):
 		if tag == "script":
 			self.bad_tag = True
 
-		if self.content and tag in ("p", "i", "b", "em"):
+		if self.content and tag in ("p", "i", "b", "em", "br", "strong"):
 			self.out += f"<{tag}>"
 
 		if self.content and tag == "span":
@@ -126,7 +126,7 @@ class WuxiaWorld(HTMLParser):
 			assert "Next Chapter" in self.out or "Previous Chapter" in self.out
 			self.content = False
 
-		if self.content and tag in ("p", "i", "b", "em"):
+		if self.content and tag in ("p", "i", "b", "em", "strong"):
 			self.out += f"</{tag}>"
 			if tag == "p":
 				self.out += "\n\n"
@@ -165,9 +165,9 @@ class WuxiaWorld(HTMLParser):
 
 		# generates title - needs to acocunt for different styles
 		if self.istitle:
-			self.cptr_title = data.split(" - ")[1:3]
-			if len(data.split(" - ")) < 4:
-				self.cptr_title = re.split(r"( - )|(\. )", data)[3:7:3]
+			# self.cptr_title = data.split(" - ")[1:3]
+			# if len(data.split(" - ")) < 4:
+			self.cptr_title = re.split(r"( - )|(\. )", data)[3:-3:3]
 			self.cptr_title = ' - '.join(self.cptr_title)
 
 
