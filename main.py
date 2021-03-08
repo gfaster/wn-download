@@ -4,13 +4,17 @@ import os
 import urllib.request
 import re
 import html
+import sys
+from aux_func import *
+from sites.wuxiaWorld import WuxiaWorld
+from sites.isekaiLunatic import IsekaiLunatic
 	
-from pathvalidate import sanitize_filename
+
 sites = ["WuxiaWorld", "IsekaiLunatic"]
 
 DEBUG = False
 
-def generate(body_html, title, ftype="pdf"):
+def generate(body_html, title, ftype="pdf", location="out/"):
 	
 	out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
 	tmp = body_html
@@ -21,7 +25,7 @@ def generate(body_html, title, ftype="pdf"):
 	if ftype == "pdf":
 		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
 			file.write(out)
-		os.system(f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{title}.pdf\" ")
+		os.system(f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{location}{title}.pdf\" ")
 	if ftype == "epub":
 		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
 			file.write(out)
@@ -30,18 +34,16 @@ def generate(body_html, title, ftype="pdf"):
 	
 	print("Generated File!")
 
-def file_san(string):
-	out = sanitize_filename(string)
-	return out.replace(r".", "_")
+def get_parser(url):
+	c_url = get_site(url).casefold()
+	c_sites = [x.casefold() for x in sites]
+	# print(f"Site is: {c_url}")
+	assert c_url in c_sites # If this raises, the site is unimplemented
+	parser_class_name = sites[c_sites.index(c_url)]
+
+	return getattr(sys.modules[__name__], parser_class_name)
 
 def load_site(url=""):
-	if DEBUG:
-		f = open("test\\WM – Prologue_ 1-A Class Stranded – Reigokai_ Isekai Translations.html", "r", encoding='utf-8')
-		out = f.read()
-		f.close()
-		# print(out)
-		# return out.decode("utf-8")
-	# raise Exception("NOT IMPLEMENTED")
 	ret = ""
 	try:
 		f = open(f"cache\\{file_san(url)}.html", "r", encoding='utf-8')
@@ -61,234 +63,32 @@ def load_site(url=""):
 	# print (type (ret))
 	return ret.replace(r"&nbsp;", " ")
 
+def create_volume(start_url, end_url, name):
+	hasnext = True
+	url = start_url
+	book = "<body>"
+	count = 1
+	parser_type = get_parser(url)
+	while hasnext and count <= 100 and url != end_url:
+		parser = parser_type()
+		parser.feed(load_site(url=url))
 
-def san(string):
-	no_q = html.escape(string).replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","\"").replace(u"\u201d", "\"")
-	# return re.sub(r'(?=[^\w\-_\. \[\]\(\)\?\<\>…\/,\%\$\#\!\~])(?=^"\n")', ' ',no_q)
-	# return html.escape(html.unescape(string))
-	# return string
-	return no_q
-
-
-
-
-class WuxiaWorld(HTMLParser):
-	def __init__(self, convert_charrefs=True):
-		super().__init__(convert_charrefs=convert_charrefs)
-		self.bad_tag = False
-		self.content = False
-		self.out = ""
-		self.rawdata = ""
-		self.link_store = None
-		self.next_cptr_url = None
-		self.prev_cptr_url = None
-		self.islink = False
-		self.cptr_title = ""
-		self.istitle = False
-		self.isitalicstyle = False
-		
+		book += "<div>"
+		book += "<div class=\"new-chapter\">"
+		book += "<h2>" + parser.cptr_title + "</h2>"
+		book += "</div>"
 
 
-	def handle_starttag(self, tag, attrs):
-		if tag == "script":
-			self.bad_tag = True
+		url = parser.get_next_cptr_url()
+		book += parser.get_out().replace("<p>l<\\/p>", "")
+		# assert "<p>l<\\/p>" not in book
+		book += "</div>"
+		hasnext = url is not None
+		if url == end_url: break
+		count += 1
 
-		if self.content and tag in ("p", "i", "b", "em", "br", "strong"):
-			self.out += f"<{tag}>"
+	generate(book + "</body>", name, location=f"out/{get_site(start_url)}/")
 
-		if self.content and tag == "span":
-			style_tag = [v for i, v in enumerate(attrs) if v[0] == "style"][0][1]
-			if re.search(r"font-style: ?italic", style_tag):
-				self.out += "<em>"
-				self.isitalicstyle = True
-
-
-		if ("id","chapter-content") in attrs:
-			self.content = True
-			# print("content start")
-
-		if tag == "title":
-			self.istitle = True
-
-		if self.content and ("class", "chapter-nav") in attrs:
-			self.islink=True
-			self.link_store = [v for i, v in enumerate(attrs) if v[0] == "href"][0][1]
-
-
-
-	def handle_endtag(self, tag):
-		if tag == "script":
-			assert self.bad_tag
-			self.bad_tag = False
-
-
-		if self.content and tag == "div":
-			assert "Next Chapter" in self.out or "Previous Chapter" in self.out
-			self.content = False
-
-		if self.content and tag in ("p", "i", "b", "em", "strong"):
-			self.out += f"</{tag}>"
-			if tag == "p":
-				self.out += "\n\n"
-
-		if self.isitalicstyle and tag == "span":
-			self.out += "</em>"
-			self.isitalicstyle = False
-
-
-		if self.islink:
-			self.islink = False
-
-		if self.istitle:
-			self.istitle = False
-
-
-
-	def handle_data(self, data):
-		if self.content and not self.bad_tag:
-			self.out += san(data)
-
-		if self.islink:
-			self.islink = False
-			assert self.link_store
-			if "Previous" in data:
-				# print(f"found prev: {self.link_store}")
-				self.prev_cptr_url = self.link_store
-				self.link_store = None
-			elif "Next" in data:
-				# print(f"found next: {self.link_store}")
-				self.next_cptr_url = self.link_store
-				self.link_store = None
-			else:
-				print(f"weird link found [{data}]({self.link_store})")
-				self.link_store = None
-
-		# generates title - needs to acocunt for different styles
-		if self.istitle:
-			# self.cptr_title = data.split(" - ")[1:3]
-			# if len(data.split(" - ")) < 4:
-			self.cptr_title = re.split(r"( - )|(\. )", data)[3:-3:3]
-			self.cptr_title = ' - '.join(self.cptr_title)
-
-
-
-
-	def get_next_cptr_url(self):
-		n = ("https://www.wuxiaworld.com" if "http" not in self.next_cptr_url else "") + self.next_cptr_url
-		if self.next_cptr_url and not DEBUG:
-			return n
-		if self.next_cptr_url:
-			print(f"next chapter would be {n}")
-			return None
-		print("No next chapter found")
-		return None
-
-	def get_out(self):
-		return self.out
-
-class IsekaiLunatic(HTMLParser):
-	def __init__(self, convert_charrefs=True):
-		super().__init__(convert_charrefs=convert_charrefs)
-		self.bad_tag = False
-		self.content = False
-		self.out = ""
-		self.rawdata = ""
-		self.link_store = None
-		self.next_cptr_url = None
-		self.prev_cptr_url = None
-		self.islink = False
-		self.cptr_title = ""
-		self.istitle = False
-		
-
-
-	def handle_starttag(self, tag, attrs):
-		if tag == "script":
-			self.bad_tag = True
-
-		if self.content and tag == "p":
-			self.out += "\n<p>"
-
-		if ("class","entry-content") in attrs:
-			self.content = True
-			# print("content start")
-
-		if ("class", "entry-title") in attrs:
-			self.istitle = True
-
-		if self.content and tag == "a":
-			# print("found link")
-			self.islink=True
-			self.link_store = [v for i, v in enumerate(attrs) if v[0] == "href"][0][1]
-
-		if self.content and tag == "hr":
-			self.out += "\n<hr>\n"
-
-
-
-	def handle_endtag(self, tag):
-		if tag == "script":
-			assert self.bad_tag
-			self.bad_tag = False
-
-
-		if self.content and tag == "div":
-			assert "Next Chapter" in self.out or "Previous Chapter" in self.out
-			self.content = False
-
-		if self.content and tag == "p":
-			self.out += "</p>\n\n"
-
-		if self.islink:
-			self.islink = False
-
-		if self.istitle:
-			self.istitle = False
-
-
-
-	def handle_data(self, data):
-		if self.content and not self.bad_tag:
-			new_l = san(data).replace("<", r"&lt;")
-			self.out += new_l if new_l != "l" else ""
-
-		if self.islink:
-			self.islink = False
-			assert self.link_store
-			if "Previous Chapter" in data:
-				# print(f"found prev: {self.link_store}")
-				self.prev_cptr_url = self.link_store
-				self.link_store = None
-			elif "Next Chapter" in data:
-				# print(f"found next: {self.link_store}")
-				self.next_cptr_url = self.link_store
-				self.link_store = None
-			else:
-				print(f"weird link found [{data}]({self.link_store})")
-				self.link_store = None
-
-		if self.istitle:
-			self.cptr_title = data.split(" – ")[1:]
-			self.cptr_title = san(' - '.join(self.cptr_title))
-
-
-
-
-
-	def get_next_cptr_url(self):
-		if not self.next_cptr_url: return None
-		n = ("https://www.isekailunatic.com" if "http" not in self.next_cptr_url else "") + self.next_cptr_url
-		if self.next_cptr_url and not DEBUG:
-			return n
-		if self.next_cptr_url:
-			print(f"next chapter would be {n}")
-			return None
-		print("No next chapter found")
-		return None
-
-	def get_out(self):
-		return san(self.out).replace(r"<p>l</p>", " ")
-		# return re.sub(r"<p>l<\/p>", " ", san(self.out))
 
 batcht= {
 	"Tsuki-Tome-1": [
@@ -351,34 +151,39 @@ batch = {
 		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-176",
 		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-201"
 	],
+	"slr-volume-9": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-201",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-226"
+	],
+	"slr-volume-10": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-226",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-251"
+	],
+	"slr-volume-11": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-251",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-276"
+	],
+	"slr-volume-12": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-276",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-301"
+	],
+	"slr-volume-13": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-301",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-326"
+	],
+	"slr-volume-14": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-326",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-351"
+	],
+	"slr-volume-15": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-351",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-376"
+	],
+
 }
 
 
 
 
-for volume in batch:
-	hasnext = True
-	url = batch[volume][0]
-	end_url = batch[volume][1]
-	book = "<body>"
-	count = 1
-	while hasnext and count <= 100 and url != end_url:
-		parser = WuxiaWorld()
-		parser.feed(load_site(url=url))
-
-		book += "<div>"
-		book += "<div class=\"new-chapter\">"
-		book += "<h2>" + parser.cptr_title + "</h2>"
-		book += "</div>"
-
-
-		url = parser.get_next_cptr_url()
-		book += parser.get_out().replace("<p>l<\\/p>", "")
-		# assert "<p>l<\\/p>" not in book
-		book += "</div>"
-		print("finished chapter ", parser.cptr_title)
-		hasnext = url is not None
-		if url == end_url: break
-		count += 1
-
-	generate(book + "</body>", volume)
+for volume in batcht:
+	create_volume(batcht[volume][0], batcht[volume][1], volume)

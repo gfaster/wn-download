@@ -3,3 +3,4 @@ test/*
 tmp/*
 *.pdf
 *.html
+__pycache__/

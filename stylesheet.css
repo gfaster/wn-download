@@ -22,6 +22,14 @@ p {
 	/*font-family: sans-serif;*/
 }
 .new-chapter {
-	padding-top: 1cm;
+	padding-top: 2cm;
 	font-family: Georgia, serif;
+}
+
+h2 {
+	font-size: 36pt;
+}
+
+a {
+	color: aqua;
 }
