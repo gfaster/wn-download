@@ -1,10 +1,10 @@
-from html.parser import HTMLParser
 import time
 import os
 import urllib.request
 import re
 import html
 import sys
+from bs4 import BeautifulSoup
 from aux_func import *
 from sites.wuxiaWorld import *
 from sites.isekaiLunatic import *
@@ -13,7 +13,19 @@ from sites.lightnovelstranslations import *
 
 sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations"]
 
-DEBUG = False
+DEBUG = True
+
+
+
+
+
+
+
+
+
+
+
+
 
 def generate(body_html, title, ftype="pdf", location="out/"):
 	
@@ -39,14 +51,17 @@ def get_parser(url):
 	c_url = get_site(url).casefold()
 	c_sites = [x.casefold() for x in sites]
 	# print(f"Site is: {c_url}")
-	assert c_url in c_sites # If this raises, the site is unimplemented
+	assert c_url in c_sites, " If this raises, the site is unimplemented"
 	parser_class_name = sites[c_sites.index(c_url)]
 
-	return getattr(sys.modules[__name__], parser_class_name)
+	ret = getattr(sys.modules[__name__], parser_class_name)
+	assert BaseParser in ret.mro(), f"{parser_class_name} does not inherit from BaseParser"
+	return ret
 
 def load_site(url=""):
 	ret = ""
 	try:
+		# try and get the file from the cache if it exists
 		f = open(f"cache\\{file_san(url)}.html", "r", encoding='utf-8')
 		print(f"found {file_san(url)} in cache")
 		ret = f.read()
@@ -64,30 +79,29 @@ def load_site(url=""):
 	return ret.replace(r"&nbsp;", " ")
 
 def create_volume(start_url, end_url, name):
-	hasnext = True
 	url = start_url
 	book = "<body>"
 	count = 1
+	max_count = 5000
 	parser_type = get_parser(url)
-	while hasnext and count <= 5000 and url != end_url:
-		parser = parser_type()
-		parser.feed(load_site(url=url))
+	if DEBUG:
+		max_count = 5
 
-		book += "<div>"
-		book += "<div class=\"new-chapter\">"
-		book += "<h2>" + parser.cptr_title + "</h2>"
-		book += "</div>"
-
+	while url is not None and count <= max_count and url != end_url:
+		parser = parser_type(load_site(url=url), count)
 
 		url = parser.get_next_cptr_url()
-		book += parser.get_out().replace("<p>l<\\/p>", "")
-		# assert "<p>l<\\/p>" not in book
+
+		book += f"<div id=\"chapter-{count}\">"
+		book += parser.get_content()
 		book += "</div>"
-		hasnext = url is not None
-		if url == end_url: break
+		
 		count += 1
 
-	generate(book + "</body>", name, location=f"out/{get_site(start_url)}/")
+	if not DEBUG:
+		generate(book + "</body>", name, location=f"out/{get_site(start_url)}/")
+	else:
+		generate(book + "</body>", "out", location=f"test/")
 
 
 batcht= {
@@ -315,7 +329,7 @@ batchwm = {
 	]
 }
 
-batch_to_gen = batchs
+batch_to_gen = tsuki_full
 
 for volume in batch_to_gen:
 	create_volume(batch_to_gen[volume][0], batch_to_gen[volume][1], volume)
