@@ -6,11 +6,12 @@ import re
 import html
 import sys
 from aux_func import *
-from sites.wuxiaWorld import WuxiaWorld
-from sites.isekaiLunatic import IsekaiLunatic
+from sites.wuxiaWorld import *
+from sites.isekaiLunatic import *
+from sites.lightnovelstranslations import *
 	
 
-sites = ["WuxiaWorld", "IsekaiLunatic"]
+sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations"]
 
 DEBUG = False
 
@@ -51,8 +52,7 @@ def load_site(url=""):
 		ret = f.read()
 		f.close()
 	except:
-		print("waiting...", end="\r")
-		time.sleep(10)
+		wait_timer(10)
 		print("loading up ",url)
 		req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
 		ret = urllib.request.urlopen(req).read().decode("UTF-8")
@@ -69,7 +69,7 @@ def create_volume(start_url, end_url, name):
 	book = "<body>"
 	count = 1
 	parser_type = get_parser(url)
-	while hasnext and count <= 100 and url != end_url:
+	while hasnext and count <= 5000 and url != end_url:
 		parser = parser_type()
 		parser.feed(load_site(url=url))
 
@@ -111,11 +111,23 @@ batcht= {
 		"https://isekailunatic.wordpress.com/2017/04/21/chapter-232-everyday-life-and-the-towns-state/",
 		"https://isekailunatic.com/2020/05/31/tsuki-chapter-309-the-identity-of-the-revolutions-antitheism/"
 	],
-	"Tsuki-Tome-6-2021-03-05": [
+	"Tsuki-Tome-6-2021-05-014": [
 		"https://isekailunatic.com/2020/05/31/tsuki-chapter-309-the-identity-of-the-revolutions-antitheism/",
-		"https://isekailunatic.com/2021/03/01/tsuki-chapter-388-unequivalent-exchange/"
+		"https://isekailunatic.com/2021/03/26/tsuki-chapter-394-unexpected-audience-%e2%91%a0/"
 	],
+	"Tsuki-full": [
+		"https://isekailunatic.wordpress.com/2015/09/19/prologue-this-is-the-beginning-of-the-autumn-sky/",
+		"https://isekailunatic.com/2021/03/26/tsuki-chapter-394-unexpected-audience-%e2%91%a0/"
+	]
+
 	
+}
+
+tsuki_full = {
+	"Tsuki-full": [
+		"https://isekailunatic.wordpress.com/2015/09/19/prologue-this-is-the-beginning-of-the-autumn-sky/",
+		" "
+	]
 }
 
 batch = {
@@ -179,11 +191,131 @@ batch = {
 		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-351",
 		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-376"
 	],
+	"slr-volume-16": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-376",
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-401"
+	],
+	"slr-volume-17": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-401",
+		""
+	],
+	"slr-all": [
+		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-1",
+		""
+	]
 
 }
 
+batchs = {
+	"Stealth-volume-1": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-01-an-invitation-to-another-world/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-22/"
+	],
+	"Stealth-volume-2": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-22/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-56/"
+	],
+	"Stealth-volume-3": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-56/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-117/"
+	],
+	"Stealth-volume-4": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-117/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-178/"
+	],
+	"Stealth-volume-5": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-178/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-217/"
+	],
+	"Stealth-Akira-Aida": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-217/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-240/"
+	],
+	"Stealth-Volume-6": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-240/",
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-286-teaser/"
+	],
+	"Stealth-All": [
+		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-01-an-invitation-to-another-world/",
+		""
+	]
 
+}
 
+batchk = {
+	"Arrow-knee-vol-1": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-1/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-42/"
+	],
+	"Arrow-knee-vol-2": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-42/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-81/"
+	],
+	"Arrow-knee-vol-3": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-81/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-114/"
+	],
+	"Arrow-knee-vol-4": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-114/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-139/"
+	],
+	"Arrow-knee-vol-5": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-139/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-173/"
+	],
+	"Arrow-knee-vol-6": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-173/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-216/"
+	],
+	"Arrow-knee-vol-7": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-216/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/57746-2/"
+	],
+	"Arrow-knee-vol-8": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/57746-2/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-300/"
+	],
+	"Arrow-knee-vol-9": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-300/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-349/"
+	],
+	"Arrow-knee-vol-10": [
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-349/",
+	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-394/"
+	],
+}
 
-for volume in batcht:
-	create_volume(batcht[volume][0], batcht[volume][1], volume)
+batchdf = {
+	"dragon-friend-vol-1": [
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/chapter-1-dragon-san-is-a-loner/",
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-34/"
+	],
+	"dragon-friend-vol-2": [
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-34/",
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-68/"
+	],
+	"dragon-friend-vol-3": [
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-68/",
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-102/"
+	],
+	"dragon-friend-vol-4": [
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-102/",
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-152/"
+	],
+	"dragon-friend-vol-5": [
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-152/",
+		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-185/"
+	],
+}
+
+batchwm = {
+	"wm-full": [
+	"https://isekailunatic.com/2020/02/12/wm-prologue-1-a-class-stranded/",
+	""
+	]
+}
+
+batch_to_gen = batchs
+
+for volume in batch_to_gen:
+	create_volume(batch_to_gen[volume][0], batch_to_gen[volume][1], volume)

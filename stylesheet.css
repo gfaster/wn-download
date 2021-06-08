@@ -1,13 +1,13 @@
 @page {
   margin: 1.5cm;
-  background: black;
+  background: white;
 
 }
 body {
 	border-collapse: collapse;
-	background: black;
+	background: white;
 	color:white;
-	border-color: black;
+	border-color: white;
 	/*border-style: solid;*/
 	/*border-width: 2cm 3cm;*/
 	bottom: 0;

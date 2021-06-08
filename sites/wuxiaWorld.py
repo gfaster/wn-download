@@ -22,6 +22,7 @@ class WuxiaWorld(HTMLParser):
 		self.cptr_title = ""
 		self.istitle = False
 		self.isitalicstyle = False
+		self.linkiscoming = False
 		
 
 
@@ -31,6 +32,8 @@ class WuxiaWorld(HTMLParser):
 
 		if self.content and tag in ("p", "i", "b", "em", "br", "strong"):
 			self.out += f"<{tag}>"
+			if tag == "p":
+				self.out += " "
 
 		if self.content and tag == "span":
 			style_tag = [v for i, v in enumerate(attrs) if v[0] == "style"][0][1]
@@ -46,9 +49,15 @@ class WuxiaWorld(HTMLParser):
 		if tag == "title":
 			self.istitle = True
 
-		if self.content and ("class", "chapter-nav") in attrs:
-			self.islink=True
-			self.link_store = [v for i, v in enumerate(attrs) if v[0] == "href"][0][1]
+		if tag == "li" and ("class", "next") in attrs and not self.next_cptr_url:
+			self.linkiscoming=True
+
+
+		if self.linkiscoming and tag == "a":
+			
+			self.next_cptr_url = [v for i, v in enumerate(attrs) if v[0] == "href"][0][1]
+			# print(self.link_store)
+			self.linkiscoming = False
 
 
 
@@ -59,7 +68,7 @@ class WuxiaWorld(HTMLParser):
 
 
 		if self.content and tag == "div":
-			assert "Next Chapter" in self.out or "Previous Chapter" in self.out
+			# assert "Next Chapter" in self.out or "Previous Chapter" in self.out
 			self.content = False
 
 		if self.content and tag in ("p", "i", "b", "em", "strong"):
@@ -84,20 +93,20 @@ class WuxiaWorld(HTMLParser):
 		if self.content and not self.bad_tag:
 			self.out += san(data)
 
-		if self.islink:
-			self.islink = False
-			assert self.link_store
-			if "Previous" in data:
-				# print(f"found prev: {self.link_store}")
-				self.prev_cptr_url = self.link_store
-				self.link_store = None
-			elif "Next" in data:
-				# print(f"found next: {self.link_store}")
-				self.next_cptr_url = self.link_store
-				self.link_store = None
-			else:
-				print(f"weird link found [{data}]({self.link_store})")
-				self.link_store = None
+		# if self.islink:
+		# 	self.islink = False
+		# 	assert self.link_store
+		# 	if "Previous" in data:
+		# 		# print(f"found prev: {self.link_store}")
+		# 		self.prev_cptr_url = self.link_store
+		# 		self.link_store = None
+		# 	elif "Next" in data:
+		# 		# print(f"found next: {self.link_store}")
+		# 		self.next_cptr_url = self.link_store
+		# 		self.link_store = None
+		# 	else:
+		# 		print(f"weird link found [{data}]({self.link_store})")
+		# 		self.link_store = None
 
 		# generates title - needs to acocunt for different styles
 		if self.istitle:
@@ -110,12 +119,14 @@ class WuxiaWorld(HTMLParser):
 
 
 	def get_next_cptr_url(self):
-		n = ("https://www.wuxiaworld.com" if "http" not in self.next_cptr_url else "") + self.next_cptr_url
+		if not self.next_cptr_url: return None
+		n = "https://www.wuxiaworld.com" + self.next_cptr_url
 		if self.next_cptr_url and not DEBUG:
 			return n
 		if self.next_cptr_url:
 			print(f"next chapter would be {n}")
 			return None
+
 		print("No next chapter found")
 		return None
 

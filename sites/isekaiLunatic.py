@@ -56,7 +56,7 @@ class IsekaiLunatic(HTMLParser):
 
 		if self.content and tag == "div" and not self.bad_tag:
 			# assert "Next Chapter" in self.out or "Previous Chapter" in self.out or "Next chapter" in self.out or "Previous chapter" in self.out
-			assert self.next_cptr_url or self.prev_cptr_url
+			# assert self.next_cptr_url or self.prev_cptr_url
 			self.content = False
 
 		if self.content and tag in ("i", "b", "em", "br", "strong"):
@@ -107,6 +107,7 @@ class IsekaiLunatic(HTMLParser):
 
 
 	def get_next_cptr_url(self):
+		if not self.next_cptr_url: print("no next found")
 		if not self.next_cptr_url: return None
 		n = ("https://www.isekailunatic.com" if "http" not in self.next_cptr_url else "") + self.next_cptr_url
 		if self.next_cptr_url and not DEBUG:
