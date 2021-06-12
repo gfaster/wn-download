@@ -18,7 +18,7 @@ class IsekaiLunatic(BaseParser):
 		out = True
 		out = out and tag.name == u"a"								# tag is <a>
 		out = out and len(tag.contents) <= 1						# tag has no children
-		out = out and len(tag.string) < 30							# tag isn't too long (to lower searching)
+		out = out and len(tag.string) < 30							# tag isn't too long (to reduce searching)
 		out = out and re.search(r"(?i)next ?chapter", tag.string)	# tag contents contain next chapter
 		return out
 
@@ -33,5 +33,16 @@ class IsekaiLunatic(BaseParser):
 		return link[0]['href']
 
 	def get_content(self):
+		self.cleanup_content()
+
+		chapter_h1 = self.soup.new_tag('h1', class_='chapter-heading')
+		self.c_soup.insert(0, chapter_h1)
+		chapter_h1.string = f"Chapter {self.chapternum}"
+
 		return self.c_soup.prettify()
-	
+
+	def cleanup_content(self):
+		super().cleanup_content()
+
+		for sharelink in self.c_soup.find_all('div', class_='sharedaddy'):
+			sharelink.decompose()

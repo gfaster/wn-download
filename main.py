@@ -29,18 +29,39 @@ DEBUG = True
 
 def generate(body_html, title, ftype="pdf", location="out/"):
 	
-	out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
-	tmp = body_html
-	out += re.sub(r'(Next Chapter)|(Previous Chapter)', '', tmp)
-	out += "</html>"
+	
 	
 
 	if ftype == "pdf":
+		out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
+		tmp = body_html
+		out += "</html>"
 		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
 			file.write(out)
-		os.system(f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{location}{title}.pdf\" ")
+		cmd = f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{location}{title}.pdf\" "
+		cmd_exec(cmd)
 	if ftype == "epub":
-		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
+		out = """<?xml version="1.0" encoding="UTF-8"?>
+				<!DOCTYPE html>
+				<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en"
+					xml:lang="en" epub:prefix="z3998: http://www.daisy.org/z3998/2012/vocab/structure/#">
+					<head>
+						<title>Book</title>
+						<link href="css/epub.css" type="text/css" rel="stylesheet" />
+					</head>"""
+		tmp = body_html
+		out += "</html>"
+
+		# copy over template materials
+		cmd_exec("rmdir tmp\\template_1")
+		cmd_exec("xcopy /E epub_template\\template_1 tmp\\")
+		with open(f"tmp/template_1/so4.xhtml", "w", encoding="utf-8") as file:
+			file.write(out)
+
+		# this is beyond disgusting, I hate it
+		# need to figure out a dataclass for this so I don't have to pass chapters
+		out = gen_nav("Book", list(range(200)), list(range(200)))
+		with open(f"tmp/template_1/nav.xhtml", "w", encoding="utf-8") as file:
 			file.write(out)
 
 	# HTML(string=out).write_pdf( f"{title}.pdf")
@@ -54,8 +75,9 @@ def get_parser(url):
 	assert c_url in c_sites, " If this raises, the site is unimplemented"
 	parser_class_name = sites[c_sites.index(c_url)]
 
+	# gets the parser class located in the [site].py 
 	ret = getattr(sys.modules[__name__], parser_class_name)
-	assert BaseParser in ret.mro(), f"{parser_class_name} does not inherit from BaseParser"
+	assert issubclass(ret, BaseParser), f"{parser_class_name} does not inherit from BaseParser"
 	return ret
 
 def load_site(url=""):
@@ -77,6 +99,50 @@ def load_site(url=""):
 
 	# print (type (ret))
 	return ret.replace(r"&nbsp;", " ")
+
+def gen_nav(title, chapters:list, chapternums:list):
+	header = """ <?xml version="1.0" encoding="utf-8"?>
+	<!DOCTYPE html>
+	<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en"
+	lang="en">
+	<head>
+		<title>{}</title>
+		<link href="css/epub.css" rel="stylesheet" type="text/css"/>
+		<link href="css/nav.css" rel="stylesheet" type="text/css"/>
+	</head>
+	<body>
+	<nav epub:type="toc" id="toc">
+	<h2>Contents</h2>
+	<ol id="tocList">
+	""".format(title)
+
+	footer = """
+	</ol>
+	</nav>
+	</body>
+	</html>
+	"""
+
+	line = """ 
+	<li>
+		<a href="s04.xhtml#chapter-{}">
+			{}
+		</a>
+	</li>
+	"""
+
+	out = header
+
+	for chap, num in zip(chapters, chapternums):
+		assert isinstance(num, (int, float))
+		out += line.format(num, chap)
+	out += footer
+
+	return out
+
+def gen_ncx(title, chapters:list, chapternums:list):
+	pass
+	# this would only be used for backward compatibility (ewwww)
 
 def create_volume(start_url, end_url, name):
 	url = start_url
