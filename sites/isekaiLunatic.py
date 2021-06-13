@@ -2,10 +2,10 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aux_func import *
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import re
 
-DEBUG = True
+DEBUG = False
 
 class IsekaiLunatic(BaseParser):
 	def __init__(self, htmldoc, chapternum):
@@ -32,17 +32,40 @@ class IsekaiLunatic(BaseParser):
 			print ("Next Chapter: ", link[0]['href'])
 		return link[0]['href']
 
+	def _get_title(self):
+		out = self.soup.title.string
+		out = re.sub(r' ?(–|(-+)) ?Reigokai: ?Isekai ?Translations', '', out)
+		out = re.sub(r'^.{0,15} – ', '', out)
+		return out
+
+
 	def get_content(self):
 		self.cleanup_content()
 
-		chapter_h1 = self.soup.new_tag('h1', class_='chapter-heading')
+		# holy shit this notation is ugly but class_ will actually put in "class_" instead of "class"
+		chapter_h1 = self.soup.new_tag('h2', **{'class':'chapter-heading'})
 		self.c_soup.insert(0, chapter_h1)
-		chapter_h1.string = f"Chapter {self.chapternum}"
+		chapter_h1.string = self._get_title()
 
-		return self.c_soup.prettify()
+		out = Chapter(number = self.chapternum, title = self._get_title(), content = self.c_soup.prettify())
+
+		return out
 
 	def cleanup_content(self):
 		super().cleanup_content()
 
 		for sharelink in self.c_soup.find_all('div', class_='sharedaddy'):
 			sharelink.decompose()
+
+		for tag in self.c_soup.find_all('p'):
+			is_nav = False
+			for child in tag.contents:
+				if child.string == None:
+					continue
+				if isinstance(child, Tag) and re.match(r'(?i)(next)|(previous) chapter', child.string):
+					is_nav = True
+			if is_nav:
+				tag.decompose()
+				break
+
+

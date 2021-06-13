@@ -5,7 +5,15 @@ import time
 from bs4 import BeautifulSoup
 import os
 import re
+from dataclasses import dataclass, field
 
+
+@dataclass(order=True, frozen=True)
+class Chapter(object):
+	"""Class that all parsers should return """
+	number: int = field(repr=False)
+	title: str
+	content: str = field(repr=False)
 
 
 class BaseParser(object):
@@ -27,8 +35,9 @@ class BaseParser(object):
 	def get_next_cptr_url(self):
 		return None
 
-	def get_content(self):
-		return self.c_soup.get_text()
+	def get_content(self) -> Chapter:
+		out = Chapter(number = self.chapternum, title = self.soup.title.string, content = self.c_soup.get_text())
+		return out
 
 	def cleanup_content(self):
 
@@ -64,6 +73,30 @@ class BaseParser(object):
 			del tag['style']
 
 
+		# TODO: Support images
+		# get rid of all img tags
+		for tag in self.c_soup.find_all('img'):
+			tag.decompose()
+
+
+		# get rid of empty divs
+		def empty_div(tag):
+			out = True
+			out = out and tag.name in ('div', 'span')
+			out = out and len(tag.get_text(strip = True)) == 0
+
+		for tag in self.c_soup.find_all(empty_div):
+			tag.decompose()
+
+
+
+def zipdir(path, ziph):
+    # ziph is zipfile handle
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            ziph.write(os.path.join(root, file), 
+                       os.path.relpath(os.path.join(root, file), 
+                                       os.path.join(path, '..')))
 
 def file_san(string):
 	out = sanitize_filename(string)

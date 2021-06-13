@@ -9,11 +9,12 @@ from aux_func import *
 from sites.wuxiaWorld import *
 from sites.isekaiLunatic import *
 from sites.lightnovelstranslations import *
+from zipfile import ZipFile
 	
 
 sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations"]
 
-DEBUG = True
+DEBUG = False
 
 
 
@@ -27,46 +28,75 @@ DEBUG = True
 
 
 
-def generate(body_html, title, ftype="pdf", location="out/"):
+def generate(body_html, title, chapter_list, ftype="pdf", location="out/"):
 	
 	
 	
 
 	if ftype == "pdf":
 		out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
-		tmp = body_html
+		out += body_html
 		out += "</html>"
 		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
 			file.write(out)
 		cmd = f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{location}{title}.pdf\" "
 		cmd_exec(cmd)
+
+
 	if ftype == "epub":
 		out = """<?xml version="1.0" encoding="UTF-8"?>
 				<!DOCTYPE html>
 				<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en"
 					xml:lang="en" epub:prefix="z3998: http://www.daisy.org/z3998/2012/vocab/structure/#">
 					<head>
-						<title>Book</title>
+						<title>{}</title>
 						<link href="css/epub.css" type="text/css" rel="stylesheet" />
-					</head>"""
-		tmp = body_html
+					</head>""".format(title)
+		out += body_html
 		out += "</html>"
 
-		# copy over template materials
-		cmd_exec("rmdir tmp\\template_1")
-		cmd_exec("xcopy /E epub_template\\template_1 tmp\\")
-		with open(f"tmp/template_1/so4.xhtml", "w", encoding="utf-8") as file:
+		# make a fresh tmp subfolder
+		print("clearing the tmp folder...")
+		cmd_exec("rmdir tmp\\epub /s /q")
+		cmd_exec("del tmp\\* /q")
+		cmd_exec("mkdir tmp\\epub")
+
+		# copy over constant materials
+		print("copying template materials...")
+		cmd_exec("xcopy /E epub_template\\const_files\\ tmp\\epub\\")
+
+		# create the main file
+		print("creating the core files...")
+		with open("tmp/epub/EPUB/s04.xhtml", "w", encoding="utf-8") as file:
 			file.write(out)
 
-		# this is beyond disgusting, I hate it
-		# need to figure out a dataclass for this so I don't have to pass chapters
-		out = gen_nav("Book", list(range(200)), list(range(200)))
-		with open(f"tmp/template_1/nav.xhtml", "w", encoding="utf-8") as file:
+		# create the nav file
+		out = gen_nav(title, chapter_list)
+		with open("tmp/epub/EPUB/nav.xhtml", "w", encoding="utf-8") as file:
 			file.write(out)
 
-	# HTML(string=out).write_pdf( f"{title}.pdf")
+		# generate package.opf
+		out = modify_opf(title)
+		with open("tmp/epub/EPUB/package.opf", "w", encoding="utf-8") as file:
+			file.write(out) 
+
+		# create the archive
+		print("creating archive...")
+		archive = ZipFile('tmp/temp.zip', 'w')
+		archive.write('epub_template/mimetype', "mimetype")
+		zipdir('tmp/epub/META-INF/', archive)
+		zipdir('tmp/epub/EPUB/', archive)
+		
+		archive.close()
+
+		cmd_exec(f'copy /Y tmp\\temp.zip "{location}{title}.epub"')
+
+
+
+
+
 	
-	print("Generated File!")
+	print("Generated volume!")
 
 def get_parser(url):
 	c_url = get_site(url).casefold()
@@ -100,8 +130,10 @@ def load_site(url=""):
 	# print (type (ret))
 	return ret.replace(r"&nbsp;", " ")
 
-def gen_nav(title, chapters:list, chapternums:list):
-	header = """ <?xml version="1.0" encoding="utf-8"?>
+def gen_nav(title, chapter_list:list):
+	# <?xml version="1.0" encoding="utf-8"?>
+	# had this xml line in there but it didn't like it?
+	header = """ 
 	<!DOCTYPE html>
 	<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en"
 	lang="en">
@@ -125,7 +157,7 @@ def gen_nav(title, chapters:list, chapternums:list):
 
 	line = """ 
 	<li>
-		<a href="s04.xhtml#chapter-{}">
+		<a href="s04.xhtml#{}">
 			{}
 		</a>
 	</li>
@@ -133,16 +165,27 @@ def gen_nav(title, chapters:list, chapternums:list):
 
 	out = header
 
-	for chap, num in zip(chapters, chapternums):
-		assert isinstance(num, (int, float))
-		out += line.format(num, chap)
+	for chapter in chapter_list:
+		assert isinstance(chapter, Chapter)
+		assert isinstance(chapter.number, (int, float))
+		out += line.format(hash(chapter), chapter.title)
 	out += footer
 
 	return out
 
-def gen_ncx(title, chapters:list, chapternums:list):
-	pass
-	# this would only be used for backward compatibility (ewwww)
+def modify_opf(title):
+	soup = None
+	with open('epub_template/dynamic_files/package.opf', 'r') as opf:
+		soup = BeautifulSoup(opf.read(), "html.parser")
+
+	main_title = soup.find('dc:title', id='t1')
+	main_title.string = title
+
+	sub_title = soup.find('dc:title', id='t2')
+	sub_title.string = title.strip() + " Created with WN-Download"
+
+	return soup.prettify()
+
 
 def create_volume(start_url, end_url, name):
 	url = start_url
@@ -150,6 +193,7 @@ def create_volume(start_url, end_url, name):
 	count = 1
 	max_count = 5000
 	parser_type = get_parser(url)
+	chapter_list = []
 	if DEBUG:
 		max_count = 5
 
@@ -158,16 +202,19 @@ def create_volume(start_url, end_url, name):
 
 		url = parser.get_next_cptr_url()
 
-		book += f"<div id=\"chapter-{count}\">"
-		book += parser.get_content()
-		book += "</div>"
+		chapter = parser.get_content()
+		book += f"<section id=\"{hash(chapter)}\">"
+		book += chapter.content
+		book += "</section>"
+
+		chapter_list.append(chapter)
 		
 		count += 1
 
 	if not DEBUG:
-		generate(book + "</body>", name, location=f"out/{get_site(start_url)}/")
+		generate(book + "</body>", name, chapter_list, location=f"out/{get_site(start_url)}/", ftype="epub")
 	else:
-		generate(book + "</body>", "out", location=f"test/")
+		generate(book + "</body>", "out", chapter_list, location=f"test/", ftype="epub")
 
 
 batcht= {
@@ -313,7 +360,7 @@ batchs = {
 	],
 	"Stealth-Volume-6": [
 		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-240/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-286-teaser/"
+		""
 	],
 	"Stealth-All": [
 		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-01-an-invitation-to-another-world/",
@@ -395,7 +442,16 @@ batchwm = {
 	]
 }
 
-batch_to_gen = tsuki_full
+batch_space = {
+	"Galactic-Navy": [
+	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-1-battleship-iris-conrad-part-1/",
+	""
+	]
+}
+
+batch_to_gen = batch_space
 
 for volume in batch_to_gen:
 	create_volume(batch_to_gen[volume][0], batch_to_gen[volume][1], volume)
+	if DEBUG:
+		break

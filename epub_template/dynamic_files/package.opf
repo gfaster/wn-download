@@ -9,7 +9,7 @@
 		<meta refines="#t1" property="title-type">main</meta>
 		<meta refines="#t1" property="display-seq">1</meta>
 
-		<dc:title id="t2">A Epub Generated from WN-Download</dc:title>
+		<dc:title id="t2">An Epub Generated from WN-Download</dc:title>
 		<meta refines="#t2" property="title-type">subtitle</meta>
 		<meta refines="#t2" property="display-seq">2</meta>
 
@@ -32,7 +32,7 @@
 		<item href="css/nav.css" id="css02" media-type="text/css"/>
 		<item href="cover.xhtml" id="cover" media-type="application/xhtml+xml"/>
 		<item href="s04.xhtml" id="s04" media-type="application/xhtml+xml"/>
-		<item href="nav.xhtml" id="nav" media-type="application/xhtml+xml" properties="nav scripted"/>
+		<item href="nav.xhtml" id="nav" media-type="application/xhtml+xml" properties="nav"/>
 		<item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml"/>
 	</manifest>
 	<spine toc="ncx">

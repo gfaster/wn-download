@@ -4,3 +4,6 @@ tmp/*
 *.pdf
 *.html
 __pycache__/
+Examples/
+old/
+*.epub

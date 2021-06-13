@@ -16,6 +16,7 @@ nav[epub\:type~='landmarks'], nav[epub\:type~='page-list'] {
 
 ol {
 	list-style-type: none;
+	margin-bottom: 0.3em;
 }
 
 ol > li:first-child {
