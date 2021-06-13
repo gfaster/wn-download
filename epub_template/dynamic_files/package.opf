@@ -13,8 +13,8 @@
 		<meta refines="#t2" property="title-type">subtitle</meta>
 		<meta refines="#t2" property="display-seq">2</meta>
 
-		<dc:creator id="rohrer">Gavin Rohrer</dc:creator>
-		<meta property="file-as" refines="#rohrer">Rohrer, Gavin</meta>
+		<dc:creator id="rohrer">gfaster</dc:creator>
+		<meta property="file-as" refines="#rohrer">gfaster</meta>
 
 		<dc:language>en</dc:language>
 
@@ -31,13 +31,10 @@
 		<item href="css/epub.css" id="css01" media-type="text/css"/>
 		<item href="css/nav.css" id="css02" media-type="text/css"/>
 		<item href="cover.xhtml" id="cover" media-type="application/xhtml+xml"/>
-		<item href="s04.xhtml" id="s04" media-type="application/xhtml+xml"/>
 		<item href="nav.xhtml" id="nav" media-type="application/xhtml+xml" properties="nav"/>
-		<item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml"/>
 	</manifest>
 	<spine toc="ncx">
 		<itemref idref="cover"/>
 		<itemref idref="nav"/>
-		<itemref idref="s04"/>
 	</spine>
 </package>

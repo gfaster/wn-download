@@ -5,7 +5,6 @@ from aux_func import *
 from bs4 import BeautifulSoup, Tag
 import re
 
-DEBUG = True
 
 class LightNovelsTranslations(BaseParser):
 	def __init__(self, htmldoc, chapternum):
@@ -81,3 +80,11 @@ class LightNovelsTranslations(BaseParser):
 					tag.previous_sibling.decompose()
 				tag.decompose()
 				break
+
+		# get rid of those pesky empty divs
+		for tag in self.c_soup.find_all('div', class_="code-block"):
+			tag.decompose()
+
+		for tag in self.c_soup.find_all('div'):
+			if tag.get('align') is not None:
+				tag.decompose()

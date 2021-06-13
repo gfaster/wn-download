@@ -14,7 +14,6 @@ from zipfile import ZipFile
 
 sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations"]
 
-DEBUG = False
 
 
 
@@ -28,32 +27,23 @@ DEBUG = False
 
 
 
-def generate(body_html, title, chapter_list, ftype="pdf", location="out/"):
+def generate(book:Book, ftype="epub", location="out/"):
 	
 	
 	
 
-	if ftype == "pdf":
-		out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
-		out += body_html
-		out += "</html>"
-		with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
-			file.write(out)
-		cmd = f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{location}{title}.pdf\" "
-		cmd_exec(cmd)
+	# if ftype == "pdf":
+	# 	out = "<!DOCTYPE html> <html lang=\"en\">\n <head><meta charset=\"UTF-8\"><title>Book</title></head>\n\n"
+	# 	out += body_html
+	# 	out += "</html>"
+	# 	with open(f"tmp/{title}.html", "w", encoding="utf-8") as file:
+	# 		file.write(out)
+	# 	cmd = f"wkhtmltopdf --user-style-sheet stylesheet.css \"tmp/{title}.html\" \"{location}{title}.pdf\" "
+	# 	cmd_exec(cmd)
 
 
 	if ftype == "epub":
-		out = """<?xml version="1.0" encoding="UTF-8"?>
-				<!DOCTYPE html>
-				<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en"
-					xml:lang="en" epub:prefix="z3998: http://www.daisy.org/z3998/2012/vocab/structure/#">
-					<head>
-						<title>{}</title>
-						<link href="css/epub.css" type="text/css" rel="stylesheet" />
-					</head>""".format(title)
-		out += body_html
-		out += "</html>"
+		
 
 		# make a fresh tmp subfolder
 		print("clearing the tmp folder...")
@@ -67,16 +57,17 @@ def generate(body_html, title, chapter_list, ftype="pdf", location="out/"):
 
 		# create the main file
 		print("creating the core files...")
-		with open("tmp/epub/EPUB/s04.xhtml", "w", encoding="utf-8") as file:
-			file.write(out)
+		for section in book:
+			with open(f"tmp/epub/EPUB/{section.file_title}.xhtml", "w", encoding="utf-8") as file:
+				file.write(section.generate_html())
 
 		# create the nav file
-		out = gen_nav(title, chapter_list)
+		out = gen_nav(book)
 		with open("tmp/epub/EPUB/nav.xhtml", "w", encoding="utf-8") as file:
 			file.write(out)
 
 		# generate package.opf
-		out = modify_opf(title)
+		out = modify_opf(book)
 		with open("tmp/epub/EPUB/package.opf", "w", encoding="utf-8") as file:
 			file.write(out) 
 
@@ -89,7 +80,7 @@ def generate(body_html, title, chapter_list, ftype="pdf", location="out/"):
 		
 		archive.close()
 
-		cmd_exec(f'copy /Y tmp\\temp.zip "{location}{title}.epub"')
+		cmd_exec(f'copy /Y tmp\\temp.zip "{location}{book.title}.epub"')
 
 
 
@@ -98,123 +89,16 @@ def generate(body_html, title, chapter_list, ftype="pdf", location="out/"):
 	
 	print("Generated volume!")
 
-def get_parser(url):
-	c_url = get_site(url).casefold()
-	c_sites = [x.casefold() for x in sites]
-	# print(f"Site is: {c_url}")
-	assert c_url in c_sites, " If this raises, the site is unimplemented"
-	parser_class_name = sites[c_sites.index(c_url)]
-
-	# gets the parser class located in the [site].py 
-	ret = getattr(sys.modules[__name__], parser_class_name)
-	assert issubclass(ret, BaseParser), f"{parser_class_name} does not inherit from BaseParser"
-	return ret
-
-def load_site(url=""):
-	ret = ""
-	try:
-		# try and get the file from the cache if it exists
-		f = open(f"cache\\{file_san(url)}.html", "r", encoding='utf-8')
-		print(f"found {file_san(url)} in cache")
-		ret = f.read()
-		f.close()
-	except:
-		wait_timer(10)
-		print("loading up ",url)
-		req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-		ret = urllib.request.urlopen(req).read().decode("UTF-8")
-		f = open(f"cache\\{file_san(url)}.html", "w", encoding='utf-8')
-		f.write(ret)
-		f.close()
-
-	# print (type (ret))
-	return ret.replace(r"&nbsp;", " ")
-
-def gen_nav(title, chapter_list:list):
-	# <?xml version="1.0" encoding="utf-8"?>
-	# had this xml line in there but it didn't like it?
-	header = """ 
-	<!DOCTYPE html>
-	<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en"
-	lang="en">
-	<head>
-		<title>{}</title>
-		<link href="css/epub.css" rel="stylesheet" type="text/css"/>
-		<link href="css/nav.css" rel="stylesheet" type="text/css"/>
-	</head>
-	<body>
-	<nav epub:type="toc" id="toc">
-	<h2>Contents</h2>
-	<ol id="tocList">
-	""".format(title)
-
-	footer = """
-	</ol>
-	</nav>
-	</body>
-	</html>
-	"""
-
-	line = """ 
-	<li>
-		<a href="s04.xhtml#{}">
-			{}
-		</a>
-	</li>
-	"""
-
-	out = header
-
-	for chapter in chapter_list:
-		assert isinstance(chapter, Chapter)
-		assert isinstance(chapter.number, (int, float))
-		out += line.format(hash(chapter), chapter.title)
-	out += footer
-
-	return out
-
-def modify_opf(title):
-	soup = None
-	with open('epub_template/dynamic_files/package.opf', 'r') as opf:
-		soup = BeautifulSoup(opf.read(), "html.parser")
-
-	main_title = soup.find('dc:title', id='t1')
-	main_title.string = title
-
-	sub_title = soup.find('dc:title', id='t2')
-	sub_title.string = title.strip() + " Created with WN-Download"
-
-	return soup.prettify()
 
 
-def create_volume(start_url, end_url, name):
-	url = start_url
-	book = "<body>"
-	count = 1
-	max_count = 5000
-	parser_type = get_parser(url)
-	chapter_list = []
-	if DEBUG:
-		max_count = 5
 
-	while url is not None and count <= max_count and url != end_url:
-		parser = parser_type(load_site(url=url), count)
+# def create_volume(start_url, end_url, name):
+	
 
-		url = parser.get_next_cptr_url()
-
-		chapter = parser.get_content()
-		book += f"<section id=\"{hash(chapter)}\">"
-		book += chapter.content
-		book += "</section>"
-
-		chapter_list.append(chapter)
-		
-		count += 1
-
-	if not DEBUG:
-		generate(book + "</body>", name, chapter_list, location=f"out/{get_site(start_url)}/", ftype="epub")
-	else:
-		generate(book + "</body>", "out", chapter_list, location=f"test/", ftype="epub")
+# 	if not DEBUG:
+# 		generate(book + "</body>", name, chapter_list, location=f"out/{get_site(start_url)}/", ftype="epub")
+# 	else:
+# 		generate(book + "</body>", "out", chapter_list, location=f"test/", ftype="epub")
 
 
 batcht= {
@@ -449,9 +333,120 @@ batch_space = {
 	]
 }
 
-batch_to_gen = batch_space
 
-for volume in batch_to_gen:
-	create_volume(batch_to_gen[volume][0], batch_to_gen[volume][1], volume)
-	if DEBUG:
-		break
+# weakest mage
+weakestmage = Book("Clearing an Isekai with the Zero-Believers Goddess – The Weakest Mage among the Classmates")
+weakestmage.append(Section("1st Arc: First Time in a Parallel World", 
+	"https://isekailunatic.wordpress.com/2020/02/12/wm-prologue-1-a-class-stranded/",
+	"https://isekailunatic.wordpress.com/2020/03/07/wm-chapter-25-epilogue/"
+	))
+weakestmage.append(Section("2nd Arc: Laberintos", 
+	"https://isekailunatic.wordpress.com/2020/03/09/wm-chapter-26-27-takatsuki-makoto-is-at-his-stagnation-phase/",
+	"https://isekailunatic.com/2020/04/12/wm-chapter-57-58-takatsuki-makoto-speaks-to-princess-sofia-epilogue/"
+	))
+weakestmage.append(Section("3rd Arc: Water Country Capital", 
+	"https://isekailunatic.com/2020/04/29/wm-chapter-59-sasaki-aya-is-guided-in-the-city-of-makkaren/",
+	"https://isekailunatic.com/2020/05/25/wm-chapter-76-epilogue-third-arc/"
+	))
+
+# The Galactic Navy Officer becomes an Adventurer
+galactic_adventurer = Book("The Galactic Navy Officer becomes an Adventurer")
+galactic_adventurer.append(Section("Volume 1 – Chance Encounter",
+	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-1-battleship-iris-conrad-part-1/",
+	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-20-gotania-part-2/"))
+galactic_adventurer.append(Section("Volume 2 – Adventurer",
+	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-21-adventurers-guild-1-part-1/",
+	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-85-rescue-operation-1-part-4/"))
+
+# Second Life Ranker
+slr = Book("Second Life Ranker")
+slr.append(Section("Volume 1", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-1", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-25"
+	))
+slr.append(Section("Volume 2", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-26", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-50"
+	))
+slr.append(Section("Volume 3", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-51", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-75"
+	))
+slr.append(Section("Volume 4", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-76", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-100"
+	))
+slr.append(Section("Volume 5", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-101", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-125"
+	))
+slr.append(Section("Volume 6", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-126", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-150"
+	))
+slr.append(Section("Volume 7", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-151", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-175"
+	))
+slr.append(Section("Volume 8", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-176", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-200"
+	))
+slr.append(Section("Volume 9", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-201", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-225"
+	))
+slr.append(Section("Volume 10", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-226", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-250"
+	))
+slr.append(Section("Volume 11", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-251", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-275"
+	))
+slr.append(Section("Volume 12", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-276", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-300"
+	))
+slr.append(Section("Volume 13", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-301", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-325"
+	))
+slr.append(Section("Volume 14", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-326", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-350"
+	))
+slr.append(Section("Volume 15", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-351", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-375"
+	))
+slr.append(Section("Volume 16", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-376", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-400"
+	))
+slr.append(Section("Volume 17", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-401", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-425"
+	))
+slr.append(Section("Volume 18", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-426", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-450"
+	))
+slr.append(Section("Volume 19", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-451", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-475"
+	))
+slr.append(Section("Volume 20", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-476", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-480"
+	))
+
+
+
+
+generation_target = slr
+if not DEBUG:
+	generate(generation_target, location=f"out/{get_site(generation_target.sections[0].first_chapter_url)}/", ftype="epub")
+else:
+	generation_target.title = "out"
+	generate(generation_target, location=f"test/", ftype="epub")

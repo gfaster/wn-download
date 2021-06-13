@@ -5,7 +5,6 @@ from aux_func import *
 from bs4 import BeautifulSoup, Tag
 import re
 
-DEBUG = False
 
 class IsekaiLunatic(BaseParser):
 	def __init__(self, htmldoc, chapternum):
@@ -26,6 +25,8 @@ class IsekaiLunatic(BaseParser):
 		link = self.c_soup.find_all(IsekaiLunatic._is_next_cptr_link)
 		
 		if len(link) == 0:
+			if DEBUG:
+				print("no next chapter")
 			return None
 
 		if DEBUG:

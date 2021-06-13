@@ -2,133 +2,71 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aux_func import *
-from html.parser import HTMLParser
+from bs4 import BeautifulSoup, Tag
 import re
-import html
 
-DEBUG = False
 
-class WuxiaWorld(HTMLParser):
-	def __init__(self, convert_charrefs=True):
-		super().__init__(convert_charrefs=convert_charrefs)
-		self.bad_tag = False
-		self.content = False
-		self.out = ""
-		self.rawdata = ""
-		self.link_store = None
-		self.next_cptr_url = None
-		self.prev_cptr_url = None
-		self.islink = False
-		self.cptr_title = ""
-		self.istitle = False
-		self.isitalicstyle = False
-		self.linkiscoming = False
+class WuxiaWorld(BaseParser):
+	def __init__(self, htmldoc, chapternum):
+		super(WuxiaWorld, self).__init__(htmldoc, chapternum)
+
+	def _set_c_soup(self):
+		self.c_soup = self.soup.find(id="chapter-content")
+		assert self.c_soup
+
+	def _is_next_cptr_link(tag):
+
+		out = True
+		out = out and tag.name == u"a"								# tag is <a>
+		out = out and len(tag.contents) >= 1						# tag has children
+		if tag.img == None:
+			return False
+		out = out and tag.img.get("alt") == "newer"
 		
-
-
-	def handle_starttag(self, tag, attrs):
-		if tag == "script":
-			self.bad_tag = True
-
-		if self.content and tag in ("p", "i", "b", "em", "br", "strong"):
-			self.out += f"<{tag}>"
-			if tag == "p":
-				self.out += " "
-
-		if self.content and tag == "span":
-			style_tag = [v for i, v in enumerate(attrs) if v[0] == "style"][0][1]
-			if re.search(r"font-style: ?italic", style_tag):
-				self.out += "<em>"
-				self.isitalicstyle = True
-
-
-		if ("id","chapter-content") in attrs:
-			self.content = True
-			# print("content start")
-
-		if tag == "title":
-			self.istitle = True
-
-		if tag == "li" and ("class", "next") in attrs and not self.next_cptr_url:
-			self.linkiscoming=True
-
-
-		if self.linkiscoming and tag == "a":
-			
-			self.next_cptr_url = [v for i, v in enumerate(attrs) if v[0] == "href"][0][1]
-			# print(self.link_store)
-			self.linkiscoming = False
-
-
-
-	def handle_endtag(self, tag):
-		if tag == "script":
-			assert self.bad_tag
-			self.bad_tag = False
-
-
-		if self.content and tag == "div":
-			# assert "Next Chapter" in self.out or "Previous Chapter" in self.out
-			self.content = False
-
-		if self.content and tag in ("p", "i", "b", "em", "strong"):
-			self.out += f"</{tag}>"
-			if tag == "p":
-				self.out += "\n\n"
-
-		if self.isitalicstyle and tag == "span":
-			self.out += "</em>"
-			self.isitalicstyle = False
-
-
-		if self.islink:
-			self.islink = False
-
-		if self.istitle:
-			self.istitle = False
-
-
-
-	def handle_data(self, data):
-		if self.content and not self.bad_tag:
-			self.out += san(data)
-
-		# if self.islink:
-		# 	self.islink = False
-		# 	assert self.link_store
-		# 	if "Previous" in data:
-		# 		# print(f"found prev: {self.link_store}")
-		# 		self.prev_cptr_url = self.link_store
-		# 		self.link_store = None
-		# 	elif "Next" in data:
-		# 		# print(f"found next: {self.link_store}")
-		# 		self.next_cptr_url = self.link_store
-		# 		self.link_store = None
-		# 	else:
-		# 		print(f"weird link found [{data}]({self.link_store})")
-		# 		self.link_store = None
-
-		# generates title - needs to acocunt for different styles
-		if self.istitle:
-			# self.cptr_title = data.split(" - ")[1:3]
-			# if len(data.split(" - ")) < 4:
-			self.cptr_title = re.split(r"( - )|(\. )", data)[3:-3:3]
-			self.cptr_title = ' - '.join(self.cptr_title)
-
-
-
+		return out
 
 	def get_next_cptr_url(self):
-		if not self.next_cptr_url: return None
-		n = "https://www.wuxiaworld.com" + self.next_cptr_url
-		if self.next_cptr_url and not DEBUG:
-			return n
-		if self.next_cptr_url:
-			print(f"next chapter would be {n}")
+		link = self.soup.find_all(WuxiaWorld._is_next_cptr_link)
+		
+		if len(link) == 0:
+			if DEBUG:
+				print("No next link")
 			return None
 
-		print("No next chapter found")
-		return None
+		if not re.match(r'(?i)wuxiaworld', link[0]['href']):
+			link[0]['href'] = "https://www.wuxiaworld.com" + link[0]['href']
 
-	def get_out(self):
-		return self.out
+		if DEBUG:
+			print ("Next Chapter: ", link[0]['href'])
+		return link[0]['href']
+
+	def _get_title(self):
+		out = self.soup.title.string
+		out = re.sub(r'(?i) ?- WuxiaWorld', '', out)
+		out = re.sub(r'^.{0,15} - ', '', out)
+		return out
+
+
+	def get_content(self):
+		self.cleanup_content()
+
+		# holy shit this notation is ugly but class_ will actually put in "class_" instead of "class"
+		chapter_h1 = self.soup.new_tag('h2', **{'class':'chapter-heading'})
+		self.c_soup.insert(0, chapter_h1)
+		chapter_h1.string = self._get_title()
+
+		out = Chapter(number = self.chapternum, title = self._get_title(), content = self.c_soup.prettify())
+
+		return out
+
+	def cleanup_content(self):
+		super().cleanup_content()
+
+		for tag in self.c_soup.find_all("p"):
+			if tag.get("dir") is not None:
+				del tag["dir"]
+			if tag.contents[0].name == "span":
+				tag.contents[0].unwrap()
+
+		for tag in self.c_soup.find_all("a", class_="chapter-nav"):
+			tag.decompose()
