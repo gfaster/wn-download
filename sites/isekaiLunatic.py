@@ -7,8 +7,13 @@ import re
 
 
 class IsekaiLunatic(BaseParser):
+	prints = 1
 	def __init__(self, htmldoc, chapternum):
 		super(IsekaiLunatic, self).__init__(htmldoc, chapternum)
+
+		# if IsekaiLunatic.prints > 0:
+		# 	print(self.c_soup.prettify())
+		# 	IsekaiLunatic.prints -= 1
 
 	def _is_next_cptr_link(tag):
 		if tag.string == None:
@@ -21,6 +26,7 @@ class IsekaiLunatic(BaseParser):
 		out = out and re.search(r"(?i)next ?chapter", tag.string)	# tag contents contain next chapter
 		return out
 
+
 	def get_next_cptr_url(self):
 		link = self.c_soup.find_all(IsekaiLunatic._is_next_cptr_link)
 		
@@ -30,12 +36,12 @@ class IsekaiLunatic(BaseParser):
 			return None
 
 		if DEBUG:
-			print ("Next Chapter: ", link[0]['href'])
-		return link[0]['href']
+			print ("Next Chapter: ", link[-1]['href'])
+		return link[-1]['href']
 
 	def _get_title(self):
 		out = self.soup.title.string
-		out = re.sub(r' ?(–|(-+)) ?Reigokai: ?Isekai ?Translations', '', out)
+		out = re.sub(r' ?(–|(-+)|\|) ?Reigokai:.*', '', out)
 		out = re.sub(r'^.{0,15} – ', '', out)
 		return out
 
@@ -56,6 +62,9 @@ class IsekaiLunatic(BaseParser):
 		super().cleanup_content()
 
 		for sharelink in self.c_soup.find_all('div', class_='sharedaddy'):
+			sharelink.decompose()
+
+		for sharelink in self.c_soup.find_all('div', class_='wp-dark-mode-switcher'):
 			sharelink.decompose()
 
 		for tag in self.c_soup.find_all('p'):

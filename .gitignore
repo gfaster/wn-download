@@ -1,4 +1,8 @@
 cache/*
+!cache/images/
+cache/images/*
+!cache/images/cache_table.csv
+
 test/*
 tmp/*
 *.pdf

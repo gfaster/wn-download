@@ -10,9 +10,12 @@ from sites.wuxiaWorld import *
 from sites.isekaiLunatic import *
 from sites.lightnovelstranslations import *
 from zipfile import ZipFile
+from epubcheck import EpubCheck
+import pprint
+import shutil
 	
 
-sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations"]
+sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations", "Skythewood"]
 
 
 
@@ -61,8 +64,16 @@ def generate(book:Book, ftype="epub", location="out/"):
 			with open(f"tmp/epub/EPUB/{section.file_title}.xhtml", "w", encoding="utf-8") as file:
 				file.write(section.generate_html())
 
+		# copying images
+		for image in book.get_images():
+			# print(f'\tImage: {image}')
+
+			# cmd_exec(f'copy "cache/images/{image}" tmp/epub/EPUB/images/')
+			shutil.copy(f"cache/images/{image}", 'tmp/epub/EPUB/images/')
+
 		# create the nav file
 		out = gen_nav(book)
+		# cmd_exec('mkdir tmp/epub/EPUB/images/')
 		with open("tmp/epub/EPUB/nav.xhtml", "w", encoding="utf-8") as file:
 			file.write(out)
 
@@ -81,6 +92,14 @@ def generate(book:Book, ftype="epub", location="out/"):
 		archive.close()
 
 		cmd_exec(f'copy /Y tmp\\temp.zip "{location}{book.title}.epub"')
+
+		result = EpubCheck(f"{location}{book.title}.epub")
+		if not result.valid:
+			print("FINAL EPUB IS INVALID")
+			if DEBUG or True:
+				pp = pprint.PrettyPrinter(indent=4)
+				pp.pprint(result.messages)
+
 
 
 
@@ -101,239 +120,6 @@ def generate(book:Book, ftype="epub", location="out/"):
 # 		generate(book + "</body>", "out", chapter_list, location=f"test/", ftype="epub")
 
 
-batcht= {
-	"Tsuki-Tome-1": [
-		"https://isekailunatic.wordpress.com/2015/09/19/prologue-this-is-the-beginning-of-the-autumn-sky/",
-		"https://isekailunatic.wordpress.com/2016/01/01/chapter-66-looking-at-the-departing-back/"
-	],
-	"Tsuki-Tome-2": [
-		"https://isekailunatic.wordpress.com/2016/01/01/chapter-66-looking-at-the-departing-back/",
-		"https://isekailunatic.wordpress.com/2016/05/14/chapter-111-school-festival-is-soon-to-come/"
-	],
-	"Tsuki-Tome-3": [
-		"https://isekailunatic.wordpress.com/2016/05/14/chapter-111-school-festival-is-soon-to-come/",
-		"https://isekailunatic.wordpress.com/2019/04/30/chapter-172-fair-weather-girlfriend/"
-	],
-	"Tsuki-Tome-4": [
-		"https://isekailunatic.wordpress.com/2019/04/30/chapter-172-fair-weather-girlfriend/",
-		"https://isekailunatic.wordpress.com/2017/04/21/chapter-232-everyday-life-and-the-towns-state/"
-	],
-	"Tsuki-Tome-5": [
-		"https://isekailunatic.wordpress.com/2017/04/21/chapter-232-everyday-life-and-the-towns-state/",
-		"https://isekailunatic.com/2020/05/31/tsuki-chapter-309-the-identity-of-the-revolutions-antitheism/"
-	],
-	"Tsuki-Tome-6-2021-05-014": [
-		"https://isekailunatic.com/2020/05/31/tsuki-chapter-309-the-identity-of-the-revolutions-antitheism/",
-		"https://isekailunatic.com/2021/03/26/tsuki-chapter-394-unexpected-audience-%e2%91%a0/"
-	],
-	"Tsuki-full": [
-		"https://isekailunatic.wordpress.com/2015/09/19/prologue-this-is-the-beginning-of-the-autumn-sky/",
-		"https://isekailunatic.com/2021/03/26/tsuki-chapter-394-unexpected-audience-%e2%91%a0/"
-	]
-
-	
-}
-
-tsuki_full = {
-	"Tsuki-full": [
-		"https://isekailunatic.wordpress.com/2015/09/19/prologue-this-is-the-beginning-of-the-autumn-sky/",
-		" "
-	]
-}
-
-batch = {
-	"slr-volume-1": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-1",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-26"
-	],
-	"slr-volume-2": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-26",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-51"
-	],
-	"slr-volume-3": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-51",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-76"
-	],
-	"slr-volume-4": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-76",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-101"
-	],
-	"slr-volume-5": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-101",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-126"
-	],
-	"slr-volume-6": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-126",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-151"
-	],
-	"slr-volume-7": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-151",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-176"
-	],
-	"slr-volume-8": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-176",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-201"
-	],
-	"slr-volume-9": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-201",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-226"
-	],
-	"slr-volume-10": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-226",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-251"
-	],
-	"slr-volume-11": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-251",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-276"
-	],
-	"slr-volume-12": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-276",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-301"
-	],
-	"slr-volume-13": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-301",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-326"
-	],
-	"slr-volume-14": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-326",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-351"
-	],
-	"slr-volume-15": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-351",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-376"
-	],
-	"slr-volume-16": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-376",
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-401"
-	],
-	"slr-volume-17": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-401",
-		""
-	],
-	"slr-all": [
-		"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-1",
-		""
-	]
-
-}
-
-batchs = {
-	"Stealth-volume-1": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-01-an-invitation-to-another-world/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-22/"
-	],
-	"Stealth-volume-2": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-22/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-56/"
-	],
-	"Stealth-volume-3": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-56/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-117/"
-	],
-	"Stealth-volume-4": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-117/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-178/"
-	],
-	"Stealth-volume-5": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-178/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-217/"
-	],
-	"Stealth-Akira-Aida": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-217/",
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-240/"
-	],
-	"Stealth-Volume-6": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-240/",
-		""
-	],
-	"Stealth-All": [
-		"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-01-an-invitation-to-another-world/",
-		""
-	]
-
-}
-
-batchk = {
-	"Arrow-knee-vol-1": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-1/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-42/"
-	],
-	"Arrow-knee-vol-2": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-42/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-81/"
-	],
-	"Arrow-knee-vol-3": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-81/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-114/"
-	],
-	"Arrow-knee-vol-4": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-114/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-139/"
-	],
-	"Arrow-knee-vol-5": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-139/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-173/"
-	],
-	"Arrow-knee-vol-6": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-173/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-216/"
-	],
-	"Arrow-knee-vol-7": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-216/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/57746-2/"
-	],
-	"Arrow-knee-vol-8": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/57746-2/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-300/"
-	],
-	"Arrow-knee-vol-9": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-300/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-349/"
-	],
-	"Arrow-knee-vol-10": [
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-349/",
-	"https://lightnovelstranslations.com/the-strongest-wizard/chapter-394/"
-	],
-}
-
-batchdf = {
-	"dragon-friend-vol-1": [
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/chapter-1-dragon-san-is-a-loner/",
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-34/"
-	],
-	"dragon-friend-vol-2": [
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-34/",
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-68/"
-	],
-	"dragon-friend-vol-3": [
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-68/",
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-102/"
-	],
-	"dragon-friend-vol-4": [
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-102/",
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-152/"
-	],
-	"dragon-friend-vol-5": [
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-152/",
-		"https://lightnovelstranslations.com/dragon-san-wants-a-friend/dragon-san-wants-a-friend-chapter-185/"
-	],
-}
-
-batchwm = {
-	"wm-full": [
-	"https://isekailunatic.com/2020/02/12/wm-prologue-1-a-class-stranded/",
-	""
-	]
-}
-
-batch_space = {
-	"Galactic-Navy": [
-	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-1-battleship-iris-conrad-part-1/",
-	""
-	]
-}
-
-
 # weakest mage
 weakestmage = Book("Clearing an Isekai with the Zero-Believers Goddess – The Weakest Mage among the Classmates")
 weakestmage.append(Section("1st Arc: First Time in a Parallel World", 
@@ -348,6 +134,36 @@ weakestmage.append(Section("3rd Arc: Water Country Capital",
 	"https://isekailunatic.com/2020/04/29/wm-chapter-59-sasaki-aya-is-guided-in-the-city-of-makkaren/",
 	"https://isekailunatic.com/2020/05/25/wm-chapter-76-epilogue-third-arc/"
 	))
+weakestmage.append(Section("4th Arc: Sun Country’s Capital",
+	"https://www.isekailunatic.com/2020/05/25/wm-chapter-77-takatsuki-makoto-remembers/",
+	"https://www.isekailunatic.com/2020/07/12/wm-chapter-109-epilogue-4th-arc/"
+	))
+weakestmage.append(Section("5th Arc: Water City of Makkaren",
+	"https://www.isekailunatic.com/2020/07/13/wm-chapter-110-takatsuki-makoto-returns-to-the-water-city/",
+	"https://www.isekailunatic.com/2020/08/04/wm-chapter-125-epilogue-fifth-arc/"
+	))
+weakestmage.append(Section("6th Arc: Wood Country and Lucy returning to her homeland",
+	"https://www.isekailunatic.com/2020/08/05/wm-chapter-126-takatsuki-makoto-explores/",
+	"https://www.isekailunatic.com/2020/09/20/wm-chapter-148-epilogue-sixth-arc/"
+	))
+weakestmage.append(Section("7th Arc: Fire Country",
+	"https://www.isekailunatic.com/2020/09/22/wm-chapter-149-princess-sofia-arrives-at-the-wood-country/",
+	"https://www.isekailunatic.com/2020/11/09/wm-chapter-171-7th-arc-epilogue/"
+	))
+weakestmage.append(Section("8th Arc: War",
+	"https://www.isekailunatic.com/2020/11/13/wm-chapter-172-takatsuki-makoto-speaks-to-his-comrades/",
+	"https://www.isekailunatic.com/2020/12/28/wm-chapter-197-8th-arc-epilogue/"
+	))
+weakestmage.append(Section("9th Arc: Farewell ",
+	"https://www.isekailunatic.com/2020/12/28/wm-chapter-198-lucys-comrade-wont-just-obediently-stay-hospitalized/",
+	"https://www.isekailunatic.com/2021/02/03/wm-chapter-223-epilogue-9th-arc/"
+	))
+weakestmage.append(Section("10th Arc: 1,000 Years In The Past",
+	"https://www.isekailunatic.com/2021/02/05/wm-chapter-224-takatsuki-makoto-arrives-1000-years-into-the-past/",
+	"https://www.isekailunatic.com/2021/06/20/wm-chapter-294-takatsuki-makoto-achieves-the-reunion/"
+	))
+
+
 
 # The Galactic Navy Officer becomes an Adventurer
 galactic_adventurer = Book("The Galactic Navy Officer becomes an Adventurer")
@@ -356,7 +172,7 @@ galactic_adventurer.append(Section("Volume 1 – Chance Encounter",
 	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-20-gotania-part-2/"))
 galactic_adventurer.append(Section("Volume 2 – Adventurer",
 	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-21-adventurers-guild-1-part-1/",
-	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-85-rescue-operation-1-part-4/"))
+	"https://lightnovelstranslations.com/the-galactic-navy-officer-becomes-an-adventurer/chapter-88-royal-capital-search-and-destroy-operation-part-2/"))
 
 # Second Life Ranker
 slr = Book("Second Life Ranker")
@@ -438,15 +254,85 @@ slr.append(Section("Volume 19",
 	))
 slr.append(Section("Volume 20", 
 	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-476", 
-	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-480"
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-494"
+	))
+
+tsukimichi = Book("Tsuki ga Michibiku Isekai Douchuu")
+tsukimichi.append(Section("Wandering in the ends of the world Arc", 
+	"https://www.isekailunatic.com/2015/09/19/prologue-this-is-the-beginning-of-the-autumn-sky/", 
+	"https://www.isekailunatic.com/2015/10/01/chapter-31-gossip-about-the-the-hero-of-gritonia/"
+	))
+tsukimichi.append(Section("A chapter in the lifestyle of Tsige Arc", 
+	"https://www.isekailunatic.com/2015/10/03/chapter-32-the-report-of-the-secretary-ema/", 
+	"https://www.isekailunatic.com/2015/12/29/chapter-65-gossip-gritonias-hero-2/"
+	))
+tsukimichi.append(Section("Second Tome – Chance Meeting in Rotsgard Arc", 
+	"https://www.isekailunatic.com/2016/01/01/chapter-66-looking-at-the-departing-back/", 
+	"https://www.isekailunatic.com/2016/05/12/chapter-110-summer-vacations-part-2-last-migration-interview/"
+	))
+tsukimichi.append(Section("Third Tome – Kaleneon’s Participation in War Arc", 
+	"https://www.isekailunatic.com/2016/05/14/chapter-111-school-festival-is-soon-to-come/", 
+	"https://www.isekailunatic.com/2019/04/30/chapter-171-if-winter-comes/"
+	))
+tsukimichi.append(Section("Fourth Tome: Kuzunoha’s Tour", 
+	"https://www.isekailunatic.com/2019/04/30/chapter-172-fair-weather-girlfriend/", 
+	"https://www.isekailunatic.com/2017/04/17/chapter-231-whirling-banquet/"
+	))
+tsukimichi.append(Section("Fifth Tome: Labyrinth of Lorel", 
+	"https://www.isekailunatic.com/2017/04/21/chapter-232-everyday-life-and-the-towns-state/", 
+	"https://www.isekailunatic.com/2020/05/27/tsuki-chapter-307-cant-run-away-from-rembrandt/"
+	))
+tsukimichi.append(Section("Sixth Tome: Setting Sun of Aion", 
+	"https://www.isekailunatic.com/2020/05/31/tsuki-chapter-309-the-identity-of-the-revolutions-antitheism/", 
+	"https://isekailunatic.com/2021/06/09/tsuki-chapter-415-pillow-talk/"
+	))
+
+undetectable = Book("The Undetectable Strongest Job: Rule Breaker")
+undetectable.append(Section("Volume 1: 「Concealed」 In another world using the Skill Tree",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-01-an-invitation-to-another-world/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-21/"
+	))
+undetectable.append(Section("Volume 2: Adventurer Hikaru",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-22/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-55/"
+	))
+undetectable.append(Section("Volume 3: Academic City and Sun Halo Sorcerer",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-56/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-116/"
+	))
+undetectable.append(Section("Volume 4: Kingdom Dance",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-117/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-177/"
+	))
+undetectable.append(Section("Volume 5: Tower of Corruption and Innocent Knight",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-178/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-216/"
+	))
+undetectable.append(Section("Intermission: Overlapping words, overlapping hearts",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-217/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-239/"
+	))
+undetectable.append(Section("Volume 6: Spy Wars",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-240/",
+	"https://lightnovelstranslations.com/the-undetectable-strongest-job-rule-breaker/chapter-334/"
+	))
+
+raisedbydeath = Book("The Girl Raised by the Death God Holds the Sword of Darkness in Her Arms")
+raisedbydeath.append(Section("Volume One",
+	"http://skythewood.blogspot.com/2019/11/D11.html",
+	"http://skythewood.blogspot.com/2019/12/D16.html"
+	))
+raisedbydeath.append(Section("Volume Two",
+	"http://skythewood.blogspot.com/2020/01/D21.html",
+	"http://skythewood.blogspot.com/2020/02/D27.html"
 	))
 
 
 
-
-generation_target = slr
+generation_target = raisedbydeath
 if not DEBUG:
 	generate(generation_target, location=f"out/{get_site(generation_target.sections[0].first_chapter_url)}/", ftype="epub")
 else:
-	generation_target.title = "out"
+	# print([section.first_chapter_url for section in generation_target])
+	generation_target.title = "Debug Book"
 	generate(generation_target, location=f"test/", ftype="epub")

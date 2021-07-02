@@ -8,10 +8,14 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
+from urllib.request import urlopen
+import csv
+import requests
+import uuid
 
 
-DEBUG = False
-sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations"]
+DEBUG = True
+sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations", "Skythewood"]
 
 @dataclass(order=True, frozen=True)
 class Chapter(object):
@@ -19,6 +23,9 @@ class Chapter(object):
 	number: int = field(repr=False)
 	title: str
 	content: str = field(repr=False)
+	images: set = field(default_factory=set, repr=False, hash=False, compare=False)
+
+
 
 class BaseParser(object):
 	"""class that all parsers should inherit from"""
@@ -28,6 +35,9 @@ class BaseParser(object):
 		self.chapternum = chapternum
 		self.soup = BeautifulSoup(htmldoc, "html.parser")
 		self._set_c_soup()
+		self.has_cleaned = False
+		self.include_images = False
+		self.images = set()
 
 	def _set_c_soup(self):
 		self.c_soup = self.soup.find(class_="entry-content")
@@ -40,10 +50,13 @@ class BaseParser(object):
 		return None
 
 	def get_content(self) -> Chapter:
-		out = Chapter(number = self.chapternum, title = self.soup.title.string, content = self.c_soup.get_text())
+		self.cleanup_content()
+		out = Chapter(number = self.chapternum, title = self.soup.title.string, content = self.c_soup.prettify(), images = self.images)
 		return out
 
 	def cleanup_content(self):
+		if self.has_cleaned:
+			return
 
 		# get rid of all scripts
 		while self.c_soup.script is not None:
@@ -79,23 +92,54 @@ class BaseParser(object):
 
 		# TODO: Support images
 		# get rid of all img tags
-		for tag in self.c_soup.find_all('img'):
-			tag.decompose()
+		if self.include_images:
+			for tag in self.c_soup.find_all('img'):
+				img = None
+
+				try:
+					img = load_image(tag['src'])
+					self.images |= set((img,))
+					tag['src'] = f'images/{img}'
+					tag['role'] = 'presentation'
+				except Exception as e:
+
+					print(f'failed to get image at' + tag.get('src'))
+					raise e
+
+				
+		else:
+			for tag in self.c_soup.find_all('img'):
+				if DEBUG:
+					print('removed image')
+				tag.decompose()
 
 
-		# get rid of empty divs
+
+		# get rid of empty tags
 		def empty_div(tag):
 			out = True
-			out = out and tag.name in ('div', 'span')
+			out = out and tag.name in ('div', 'span', 'b', 'em', 'strong', 'i', 'a')
 			out = out and len(tag.get_text(strip = True)) == 0
+			return out
 
 		for tag in self.c_soup.find_all(empty_div):
+			if self.include_images and tag.img is not None:
+				tag.unwrap()
+			else:
+				tag.decompose()
+
+
+		# we use <p> tags, so we don't need line breaks
+		for tag in self.c_soup.find_all('br'):
 			tag.decompose()
+
+		self.has_cleaned = True
 
 
 from sites.wuxiaWorld import *
 from sites.isekaiLunatic import *
 from sites.lightnovelstranslations import *
+from sites.skythewood import *
 
 
 
@@ -107,13 +151,23 @@ class Section(object):
 	final_chapter_url: str = field(repr=False)
 	chapter_list: list = field(repr=False, init=False)
 	file_title:str = field(init=False)
+	images: set = field(init=False, repr=False, hash=False)
 
 	def __post_init__(self):
 		self.file_title = file_san(self.title).replace(" ", "_")
 		self.chapter_list = list()
+		self.images = set()
+		assert self.first_chapter_url != "", "no first chapter url"
+		assert self.final_chapter_url != "", "no final chapter url"
+
+	def get_images(self):
+		for chapter in self.chapter_list:
+			self.images |= chapter.images
+		return self.images
 
 	def generate_html(self) -> str:
 		url = self.first_chapter_url
+		assert url != "", "url is blank"
 		html = """<?xml version="1.0" encoding="UTF-8"?>
 				<!DOCTYPE html>
 				<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en"
@@ -135,7 +189,7 @@ class Section(object):
 
 			chapter = parser.get_content()
 			assert len(chapter.content) > 0
-			html += f"<section id=\"{hash(chapter)}\">"
+			html += f"<section id=\"{ghash(chapter)}\">"
 			html += chapter.content
 			html += "</section>"
 
@@ -169,6 +223,14 @@ class Book(object):
 	def __len__(self):
 		return len(self.sections)
 
+	def get_images(self):
+		images = set()
+		for section in self.sections:
+			images |= section.get_images()
+		return images
+
+		
+
 
 
 
@@ -177,7 +239,7 @@ def get_parser(url):
 	c_url = get_site(url).casefold()
 	c_sites = [x.casefold() for x in sites]
 	# print(f"Site is: {c_url}")
-	assert c_url in c_sites, " If this raises, the site is unimplemented"
+	assert c_url in c_sites, "{} is not in the sites list".format(c_url)
 	parser_class_name = sites[c_sites.index(c_url)]
 
 	# gets the parser class located in the [site].py 
@@ -189,21 +251,32 @@ def load_site(url=""):
 	ret = ""
 	try:
 		# try and get the file from the cache if it exists
-		f = open(f"cache\\{file_san(url)}.html", "r", encoding='utf-8')
-		print(f"found {file_san(url)} in cache")
+		f = open(f"cache\\{url_to_str_san(url)}.html", "r", encoding='utf-8')
+		print(f"found {url_to_str_san(url)} in cache")
 		ret = f.read()
 		f.close()
 	except:
-		wait_timer(10)
-		print("loading up ",url)
-		req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-		ret = urllib.request.urlopen(req).read().decode("UTF-8")
-		f = open(f"cache\\{file_san(url)}.html", "w", encoding='utf-8')
+		continue_flag = False
+		tries_left = 5
+		while not continue_flag:
+			wait_timer(10)
+			print("loading up ",url)
+			req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (epub scraper)'})
+			try:
+				ret = urllib.request.urlopen(req).read().decode("UTF-8")
+				continue_flag = True
+			except:
+				tries_left -= 1
+				print("FAILED TO LOAD:", url)
+			if tries_left <= 0:
+				raise Exception("ran out of attempts")
+				
+		f = open(f"cache\\{url_to_str_san(url)}.html", "w", encoding='utf-8')
 		f.write(ret)
 		f.close()
 
 	# print (type (ret))
-	return ret.replace(r"&nbsp;", " ")
+	return ret
 
 def gen_nav(book:Book):
 	# <?xml version="1.0" encoding="utf-8"?>
@@ -239,12 +312,12 @@ def gen_nav(book:Book):
 		last_chap = None
 		for chapter in section.chapter_list:
 			line = soup.new_tag("li")
-			line.append(soup.new_tag("a", href=f"{section.file_title}.xhtml#{hash(chapter)}"))
+			line.append(soup.new_tag("a", href=f"{section.file_title}.xhtml#{ghash(chapter)}"))
 			line.a.string = chapter.title
 			section_ol.append(line)
 			last_chap = chapter
 
-		section_h2 = soup.new_tag("a", href=f"{section.file_title}.xhtml#{hash(last_chap)}")
+		section_h2 = soup.new_tag("a", href=f"{section.file_title}.xhtml#{ghash(last_chap)}")
 		section_h2.string = section.title
 		section_list.append(section_li)
 		section_li.append(section_h2)
@@ -260,6 +333,8 @@ def gen_nav(book:Book):
 
 	return soup.prettify()
 
+def gen_ncx(book:Book):
+	pass
 
 def modify_opf(book:Book):
 	soup = None
@@ -276,11 +351,18 @@ def modify_opf(book:Book):
 	# <itemref idref="s04"/>
 	# add sections files
 	for section in book:
-		new_tag = soup.new_tag("item", attrs={'href':f"{section.file_title}.xhtml", 'id':section.file_title, 'media-type': 'application/xhtml+xml'})
+		new_tag = soup.new_tag("item", attrs={'href':f"{section.file_title}.xhtml", 'id':hyper_san(section.file_title), 'media-type': 'application/xhtml+xml'})
 		soup.manifest.append(new_tag)
 
-		new_tag = soup.new_tag("itemref", idref=section.file_title)
+		new_tag = soup.new_tag("itemref", idref=hyper_san(section.file_title))
 		soup.spine.append(new_tag)
+
+	for image in book.get_images():
+		assert isinstance(image, str)
+		img_type = image.split('.')[-1]
+
+		new_tag = soup.new_tag("item", attrs={'href':f"images/{image}", 'id':hyper_san(image), 'media-type': f'image/{img_type}'})
+		soup.manifest.append(new_tag)
 
 
 	return soup.prettify()	
@@ -296,8 +378,27 @@ def zipdir(path, ziph):
 def file_san(string):
 	out = sanitize_filename(string)
 	out = out.replace(".", "_")
+	out = out.replace(",", "_")
+	out = out.replace('=', '-')
 	stripped = (c for c in out if 0 < ord(c) < 127)
 	return ''.join(stripped)
+
+def url_to_str_san(url, do_hash=False):
+	t = urlparse(url)
+	pre = get_site(url)
+	post = t.path
+
+	out = None
+	assert pre
+	assert post
+
+	if do_hash:
+		out = file_san(pre + ghash(post))
+	else:
+		out = file_san(pre + post)
+
+	assert out
+	return out	
 
 def san(string):
 	no_q = html.escape(string).replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","\"").replace(u"\u201d", "\"")
@@ -306,9 +407,14 @@ def san(string):
 	# return string
 	return no_q
 
+def hyper_san(string):
+	return re.sub(r'[^a-zA-Z]', '', string)
+
 def get_site(url):
+	assert isinstance(url, str)
 	t = urlparse(url).netloc
-	return t.split('www.')[-1].split('.')[0]
+	t = t.split('www.')
+	return t[-1].split('.')[0]
 
 def wait_timer(seconds, msg="waiting..."):
 	for i in range(seconds, 0, -1):
@@ -323,3 +429,135 @@ def cmd_exec(cmd):
 def wrap(to_wrap, wrap_in):
     contents = to_wrap.replace_with(wrap_in)
     wrap_in.append(contents)
+
+def get_file_extension(file: str):
+	out = re.search(r'\.[a-zA-Z]{1,5}')
+	if out is not None:
+		return out.group(1)
+	else:
+		raise Exception(f"{file} has no extension")
+
+def get_response_content_type(response: requests.Response):
+	assert isinstance(response, requests.Response), "to prevent multiple requests, this should only handle Response objects"
+	headers = response.headers
+	file_type =headers.get('Content-Type', "nope/nope").split("/")[1]
+	# Will print 'nope' if 'Content-Type' header isn't found
+	assert file_type != 'nope'
+	return file_type
+
+
+def ghash(obj):
+	return hex(abs(hash(obj)))[2:]
+
+
+def load_image(url) -> str: #returns filename string with extension, located in cache/images/
+
+	# need the ass table bc filetypes might not be in url
+	try:
+		open('cache\\images\\cache_table.csv', 'r').close()
+	except:
+		open('cache\\images\\cache_table.csv', 'x').close()
+
+	with open('cache\\images\\cache_table.csv', 'r') as cache_table_file:
+		cache_table = list(csv.reader(cache_table_file))
+	# print(cache_table)
+
+	to_search = url_to_str_san(url, do_hash=False)
+
+	in_cache = None
+	input_col = [row[0] for row in cache_table if len(row) == 2]
+	if to_search in input_col:
+		# already got this image, return cache entry
+		index = input_col.index(to_search)
+		ret = cache_table[index][1]
+		in_cache = ret
+
+		try:
+			open(f'cache\\images\\{ret}', 'rb').close()
+			print(f'\tfound {ret} in cache')
+			return ret
+		except:
+			print(f'\t{to_search} found in cache but it\'s entry ({ret}) not saved.')
+			print(f'\t\t no worries though, I\'m saving it now')
+
+	attempts = 5
+	r = None
+	while True:
+		attempts += -1
+		print(f'\tloading up  {url}')
+		if attempts < 0:
+			raise Exception(f'could not get image at {url}')
+		try:
+			wait_timer(10, msg='\tfetching image...')
+			r = requests.get(url, stream=True)
+			if r.status_code == 200:
+				break
+		except:
+			pass
+		
+
+	file_type = get_response_content_type(r)
+	assert file_type in ('jpeg', 'png'), f'{url} does not have a valid image type ({file_type})'
+
+	file_name = ""
+	if in_cache is None:
+		file_name = str(uuid.uuid1()) + '.' + file_type
+	else:
+		file_name = in_cache
+	
+	with open('cache\\images\\cache_table.csv', 'a') as cache_table_file:
+		cache_table_file.write(to_search + ',' + file_name + '\n')
+
+	with open(f'cache\\images\\{file_name}', 'wb') as img_file:
+		for chunk in r.iter_content(1024):
+			img_file.write(chunk)
+
+	return file_name
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	# ret = ""
+	# try:
+	# 	# try and get the file from the cache if it exists
+	# 	f = open(f"cache\\images\\{file_san(url)}.html", "r", encoding='utf-8')
+	# 	print(f"found {file_san(url)} in cache")
+	# 	ret = f.read()
+	# 	f.close()
+	# except:
+	# 	continue_flag = False
+	# 	tries_left = 5
+	# 	while not continue_flag:
+	# 		wait_timer(10)
+	# 		print("loading up ",url)
+	# 		req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+	# 		try:
+	# 			ret = urllib.request.urlopen(req).read().decode("UTF-8")
+	# 			continue_flag = True
+	# 		except:
+	# 			tries_left -= 1
+	# 			print("FAILED TO LOAD:", url)
+	# 		if tries_left <= 0:
+	# 			raise Exception("ran out of attempts")
+				
+	# 	f = open(f"cache\\{file_san(url)}.html", "w", encoding='utf-8')
+	# 	f.write(ret)
+	# 	f.close()
+
+	# print (type (ret))
+	# return ret

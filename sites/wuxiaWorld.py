@@ -5,6 +5,12 @@ from aux_func import *
 from bs4 import BeautifulSoup, Tag
 import re
 
+def debug_log(text):
+	if not DEBUG:
+		return
+		
+	with open('log.html', 'w', encoding='utf-8') as fh:
+		fh.write(text)
 
 class WuxiaWorld(BaseParser):
 	def __init__(self, htmldoc, chapternum):
@@ -12,7 +18,11 @@ class WuxiaWorld(BaseParser):
 
 	def _set_c_soup(self):
 		self.c_soup = self.soup.find(id="chapter-content")
-		assert self.c_soup
+		try:
+			assert self.c_soup
+		except Exception as e:
+			
+			raise e
 
 	def _is_next_cptr_link(tag):
 
@@ -70,3 +80,6 @@ class WuxiaWorld(BaseParser):
 
 		for tag in self.c_soup.find_all("a", class_="chapter-nav"):
 			tag.decompose()
+
+		for tag in self.c_soup.find_all(True, id="chapter-content"):
+			del tag['id']
