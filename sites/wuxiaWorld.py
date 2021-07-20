@@ -75,11 +75,14 @@ class WuxiaWorld(BaseParser):
 		for tag in self.c_soup.find_all("p"):
 			if tag.get("dir") is not None:
 				del tag["dir"]
-			if tag.contents[0].name == "span":
+			if len(tag.contents) > 0 and tag.contents[0].name == "span":
 				tag.contents[0].unwrap()
 
 		for tag in self.c_soup.find_all("a", class_="chapter-nav"):
 			tag.decompose()
 
-		for tag in self.c_soup.find_all(True, id="chapter-content"):
+
+		for tag in self.soup.find_all('div', id="chapter-content"):
 			del tag['id']
+
+

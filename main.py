@@ -115,15 +115,6 @@ def generate(book:Book, ftype="epub", location="out/"):
 
 
 
-# def create_volume(start_url, end_url, name):
-	
-
-# 	if not DEBUG:
-# 		generate(book + "</body>", name, chapter_list, location=f"out/{get_site(start_url)}/", ftype="epub")
-# 	else:
-# 		generate(book + "</body>", "out", chapter_list, location=f"test/", ftype="epub")
-
-
 # weakest mage
 weakestmage = Book("Clearing an Isekai with the Zero-Believers Goddess – The Weakest Mage among the Classmates")
 weakestmage.append(Section("1st Arc: First Time in a Parallel World", 
@@ -258,7 +249,11 @@ slr.append(Section("Volume 19",
 	))
 slr.append(Section("Volume 20", 
 	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-476", 
-	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-494"
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-500"
+	))
+slr.append(Section("Volume 21", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-501", 
+	"https://www.wuxiaworld.com/novel/second-life-ranker/slr-chapter-516"
 	))
 
 tsukimichi = Book("Tsuki ga Michibiku Isekai Douchuu")
@@ -341,7 +336,7 @@ raisedbydeath.append(Section("Volume Four",
 
 
 
-generation_target = raisedbydeath
+generation_target = slr
 if not DEBUG:
 	generate(generation_target, location=f"out/{get_site(generation_target.sections[0].first_chapter_url)}/", ftype="epub")
 else:

@@ -154,7 +154,8 @@ class Section(object):
 	images: set = field(init=False, repr=False, hash=False)
 
 	def __post_init__(self):
-		self.file_title = file_san(self.title).replace(" ", "_")
+		self.file_title = '_' + file_san(self.title).replace(" ", "_")
+
 		self.chapter_list = list()
 		self.images = set()
 		assert self.first_chapter_url != "", "no first chapter url"
@@ -267,7 +268,7 @@ def load_site(url=""):
 				continue_flag = True
 			except:
 				tries_left -= 1
-				print("FAILED TO LOAD:", url)
+				print(f"FAILED TO LOAD: {url}")
 			if tries_left <= 0:
 				raise Exception("ran out of attempts")
 				
@@ -309,16 +310,21 @@ def gen_nav(book:Book):
 		section_li = soup.new_tag("li")
 		section_ol = soup.new_tag("ol", id=f"{section.file_title}List")
 
+
 		last_chap = None
+		first_chap = None
 		for chapter in section.chapter_list:
 			line = soup.new_tag("li")
 			line.append(soup.new_tag("a", href=f"{section.file_title}.xhtml#{ghash(chapter)}"))
 			line.a.string = chapter.title
 			section_ol.append(line)
 			last_chap = chapter
+			if first_chap is None:
+				first_chap = chapter
 
-		section_h2 = soup.new_tag("a", href=f"{section.file_title}.xhtml#{ghash(last_chap)}")
+		section_h2 = soup.new_tag("a", href=f"{section.file_title}.xhtml#{ghash(first_chap)}")
 		section_h2.string = section.title
+
 		section_list.append(section_li)
 		section_li.append(section_h2)
 		section_li.append(section_ol)
@@ -342,7 +348,7 @@ def modify_ncx(book:Book):
 
 	playorder_index = 1
 	for section in book:
-		sec_navpoint = soup.new_tag('navPoint', attrs={'class':'section', 'id':hyper_san(section.file_title), 'playOrder':str(playorder_index)})
+		sec_navpoint = soup.new_tag('navPoint', attrs={'class':'section', 'id':section.file_title, 'playOrder':str(playorder_index)})
 		sec_navpoint_navlabel = soup.new_tag('navLabel')
 		sec_navpoint.append(sec_navpoint_navlabel)
 
@@ -374,10 +380,10 @@ def modify_opf(book:Book):
 	# <itemref idref="s04"/>
 	# add sections files
 	for section in book:
-		new_tag = soup.new_tag("item", attrs={'href':f"{section.file_title}.xhtml", 'id':hyper_san(section.file_title), 'media-type': 'application/xhtml+xml'})
+		new_tag = soup.new_tag("item", attrs={'href':f"{section.file_title}.xhtml", 'id':section.file_title, 'media-type': 'application/xhtml+xml'})
 		soup.manifest.append(new_tag)
 
-		new_tag = soup.new_tag("itemref", idref=hyper_san(section.file_title))
+		new_tag = soup.new_tag("itemref", idref=section.file_title)
 		soup.spine.append(new_tag)
 
 	for image in book.get_images():
