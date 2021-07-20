@@ -30,6 +30,9 @@ class Skythewood(BaseParser):
 		# 	print(self.soup.get_text())
 		# 	Skythewood.prints -= 1
 
+	def get_chapter_title(self):
+		return self.soup.title.string.split('Skythewood translations: ')[-1]
+
 	def _is_next_cptr_link(tag):
 		out = True
 		out = out and tag.name == 'a'

@@ -14,7 +14,7 @@ import requests
 import uuid
 
 
-DEBUG = True
+DEBUG = False
 sites = ["WuxiaWorld", "IsekaiLunatic", "LightNovelsTranslations", "Skythewood"]
 
 @dataclass(order=True, frozen=True)
@@ -333,8 +333,31 @@ def gen_nav(book:Book):
 
 	return soup.prettify()
 
-def gen_ncx(book:Book):
-	pass
+def modify_ncx(book:Book):
+	soup = None
+	with open('epub_template/dynamic_files/toc.ncx', 'r') as ncx:
+		soup = BeautifulSoup(ncx.read(), "xml")
+
+	soup.docTitle.find('text').string = book.title
+
+	playorder_index = 1
+	for section in book:
+		sec_navpoint = soup.new_tag('navPoint', attrs={'class':'section', 'id':hyper_san(section.file_title), 'playOrder':str(playorder_index)})
+		sec_navpoint_navlabel = soup.new_tag('navLabel')
+		sec_navpoint.append(sec_navpoint_navlabel)
+
+		sec_navpoint_text = soup.new_tag('text')
+		sec_navpoint_text.string = section.title
+		sec_navpoint_navlabel.append(sec_navpoint_text)
+
+		sec_navpoint_content = soup.new_tag('content')
+		sec_navpoint_content['src'] = f"{section.file_title}.xhtml"
+		sec_navpoint.append(sec_navpoint_content)
+
+		soup.navMap.append(sec_navpoint)
+		playorder_index += 1
+
+	return soup.prettify()
 
 def modify_opf(book:Book):
 	soup = None

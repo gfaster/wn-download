@@ -77,9 +77,13 @@ def generate(book:Book, ftype="epub", location="out/"):
 		with open("tmp/epub/EPUB/nav.xhtml", "w", encoding="utf-8") as file:
 			file.write(out)
 
-		# generate package.opf
+		# generate package.opf and toc.ncx
 		out = modify_opf(book)
 		with open("tmp/epub/EPUB/package.opf", "w", encoding="utf-8") as file:
+			file.write(out) 
+
+		out = modify_ncx(book)
+		with open("tmp/epub/EPUB/toc.ncx", "w", encoding="utf-8") as file:
 			file.write(out) 
 
 		# create the archive
@@ -325,6 +329,14 @@ raisedbydeath.append(Section("Volume One",
 raisedbydeath.append(Section("Volume Two",
 	"http://skythewood.blogspot.com/2020/01/D21.html",
 	"http://skythewood.blogspot.com/2020/02/D27.html"
+	))
+raisedbydeath.append(Section("Volume Three",
+	"http://skythewood.blogspot.com/2020/02/D30.html",
+	"http://skythewood.blogspot.com/2020/04/D37.html"
+	))
+raisedbydeath.append(Section("Volume Four",
+	"http://skythewood.blogspot.com/2020/10/D41.html",
+	"http://skythewood.blogspot.com/2020/11/D48.html"
 	))
 
 
