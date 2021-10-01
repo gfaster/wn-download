@@ -136,10 +136,10 @@ class BaseParser(object):
 		self.has_cleaned = True
 
 
-from sites.wuxiaWorld import *
-from sites.isekaiLunatic import *
-from sites.lightnovelstranslations import *
-from sites.skythewood import *
+from src.sites.wuxiaWorld import *
+from src.sites.isekaiLunatic import *
+from src.sites.lightnovelstranslations import *
+from src.sites.skythewood import *
 
 
 
@@ -252,7 +252,7 @@ def load_site(url=""):
 	ret = ""
 	try:
 		# try and get the file from the cache if it exists
-		f = open(f"cache\\{url_to_str_san(url)}.html", "r", encoding='utf-8')
+		f = open(f"cache/{url_to_str_san(url)}.html", "r", encoding='utf-8')
 		print(f"found {url_to_str_san(url)} in cache")
 		ret = f.read()
 		f.close()
@@ -272,7 +272,7 @@ def load_site(url=""):
 			if tries_left <= 0:
 				raise Exception("ran out of attempts")
 				
-		f = open(f"cache\\{url_to_str_san(url)}.html", "w", encoding='utf-8')
+		f = open(f"cache/{url_to_str_san(url)}.html", "w", encoding='utf-8')
 		f.write(ret)
 		f.close()
 
@@ -483,11 +483,11 @@ def load_image(url) -> str: #returns filename string with extension, located in 
 
 	# need the ass table bc filetypes might not be in url
 	try:
-		open('cache\\images\\cache_table.csv', 'r').close()
+		open('cache/images/cache_table.csv', 'r').close()
 	except:
-		open('cache\\images\\cache_table.csv', 'x').close()
+		open('cache/images/cache_table.csv', 'x').close()
 
-	with open('cache\\images\\cache_table.csv', 'r') as cache_table_file:
+	with open('cache/images/cache_table.csv', 'r') as cache_table_file:
 		cache_table = list(csv.reader(cache_table_file))
 	# print(cache_table)
 
@@ -502,7 +502,7 @@ def load_image(url) -> str: #returns filename string with extension, located in 
 		in_cache = ret
 
 		try:
-			open(f'cache\\images\\{ret}', 'rb').close()
+			open(f'cache/images/{ret}', 'rb').close()
 			print(f'\tfound {ret} in cache')
 			return ret
 		except:
@@ -534,10 +534,10 @@ def load_image(url) -> str: #returns filename string with extension, located in 
 	else:
 		file_name = in_cache
 	
-	with open('cache\\images\\cache_table.csv', 'a') as cache_table_file:
+	with open('cache/images/cache_table.csv', 'a') as cache_table_file:
 		cache_table_file.write(to_search + ',' + file_name + '\n')
 
-	with open(f'cache\\images\\{file_name}', 'wb') as img_file:
+	with open(f'cache/images/{file_name}', 'wb') as img_file:
 		for chunk in r.iter_content(1024):
 			img_file.write(chunk)
 
