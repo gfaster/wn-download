@@ -137,7 +137,7 @@ class Book(object):
 			assert isinstance(image, str)
 			img_type = image.split('.')[-1]
 	
-			new_tag = soup.new_tag("item", attrs={'href':f"images/{image}", 'id':hyper_san(image), 'media-type': f'image/	{img_type}'})
+			new_tag = soup.new_tag("item", attrs={'href':f"images/{image}", 'id':hyper_san(image), 'media-type': f'image/{img_type}'})
 			soup.manifest.append(new_tag)
 	
 	

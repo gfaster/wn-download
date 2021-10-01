@@ -59,11 +59,11 @@ class Section(object):
             html += chapter.content
             html += "</section>"
 
-            if url == self.final_chapter_url:
-                break
             assert len(html) < 4000000, "Section is too long"
 
             self.chapter_list.append(chapter)
+            if url == self.final_chapter_url:
+                break
             url = next_url
             count += 1
         html += "</body></html>"

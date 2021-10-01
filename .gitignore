@@ -12,3 +12,5 @@ Examples/
 old/
 *.epub
 env/
+
+cache/

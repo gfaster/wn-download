@@ -64,7 +64,6 @@ def generate(book: Book, location: Path):
             file.write(section.generate_html())
     # copying images
     for image in book.get_images():
-        print(image)
         shutil.copy(Path(f"cache/images/{image}"), Path("tmp/epub/EPUB/images/"))
     # create the nav file
     out = book.gen_nav()

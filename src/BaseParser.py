@@ -75,10 +75,14 @@ class BaseParser(object):
 		if self.include_images:
 			for tag in self.c_soup.find_all('img'):
 				img = None
-
+				if ".gif" in tag['src']:
+					tag.decompose()
+					continue;
 				try:
 					img = load_image(tag['src'])
 					self.images |= set((img,))
+					for attr in list(tag.attrs):
+						del tag[attr]
 					tag['src'] = f'images/{img}'
 					tag['role'] = 'presentation'
 				except Exception as e:
