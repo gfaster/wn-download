@@ -11,3 +11,6 @@ __pycache__/
 Examples/
 old/
 *.epub
+env/
+
+cache/

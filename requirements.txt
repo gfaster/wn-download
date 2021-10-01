@@ -1,1 +1,6 @@
 pathvalidate
+epubcheck
+html5lib
+beautifulsoup4
+lxml
+pyyaml

@@ -1,15 +1,17 @@
 import os, sys
+from src.entities.Chapter import Chapter
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from aux_func import *
+from src.BaseParser import BaseParser
 from bs4 import BeautifulSoup, Tag
 import re
+from src.aux_func import DEBUG
 
 
 class IsekaiLunatic(BaseParser):
 	prints = 1
 	def __init__(self, htmldoc, chapternum):
 		super(IsekaiLunatic, self).__init__(htmldoc, chapternum)
+		self.include_images = True
 
 		# if IsekaiLunatic.prints > 0:
 		# 	print(self.c_soup.prettify())
@@ -53,12 +55,14 @@ class IsekaiLunatic(BaseParser):
 		chapter_h1 = self.soup.new_tag('h2', **{'class':'chapter-heading'})
 		self.c_soup.insert(0, chapter_h1)
 		chapter_h1.string = self._get_title()
-
-		out = Chapter(number = self.chapternum, title = self._get_title(), content = self.c_soup.prettify())
+		out = Chapter(number = self.chapternum, title = self._get_title(), content = self.c_soup.prettify(),images = self.images)
 
 		return out
 
 	def cleanup_content(self):
+		# remove resize element
+		for tag in self.c_soup.find_all('img'):
+			tag['src'] = re.sub(r"resize=.+",r"\?",tag['src'])
 		super().cleanup_content()
 
 		for sharelink in self.c_soup.find_all('div', class_='sharedaddy'):
