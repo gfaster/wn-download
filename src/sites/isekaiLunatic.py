@@ -1,9 +1,10 @@
 import os, sys
+from src.entities.Chapter import Chapter
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from aux_func import *
+from src.BaseParser import BaseParser
 from bs4 import BeautifulSoup, Tag
 import re
+from src.aux_func import DEBUG
 
 
 class IsekaiLunatic(BaseParser):

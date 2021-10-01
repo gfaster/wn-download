@@ -6,9 +6,8 @@ import html
 import sys
 from bs4 import BeautifulSoup
 from src.aux_func import *
-from src.sites.wuxiaWorld import *
-from src.sites.isekaiLunatic import *
-from src.sites.lightnovelstranslations import *
+from src.entities.Book import Book
+from src.entities.Section import Section
 from zipfile import ZipFile
 from epubcheck import EpubCheck
 import pprint
@@ -68,16 +67,16 @@ def generate(book: Book, location: Path):
         print(image)
         shutil.copy(Path(f"cache/images/{image}"), Path("tmp/epub/EPUB/images/"))
     # create the nav file
-    out = gen_nav(book)
+    out = book.gen_nav()
     with open(Path("tmp/epub/EPUB/nav.xhtml"), "w", encoding="utf-8") as file:
         file.write(out)
 
     # generate package.opf and toc.ncx
-    out = modify_opf(book)
+    out = book.modify_opf()
     with open(Path("tmp/epub/EPUB/package.opf"), "w", encoding="utf-8") as file:
         file.write(out)
 
-    out = modify_ncx(book)
+    out = book.modify_ncx()
     with open(Path("tmp/epub/EPUB/toc.ncx"), "w", encoding="utf-8") as file:
         file.write(out)
 
