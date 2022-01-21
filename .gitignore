@@ -11,3 +11,4 @@ __pycache__/
 Examples/
 old/
 *.epub
+epub_template/Alt_Covers/*
