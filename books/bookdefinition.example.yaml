@@ -1,0 +1,6 @@
+picture: "path/to/image"
+title: "Book Title"
+sections:
+  - name: "Section Name"
+    startUrl: "https://example.com/chapterstart.html"
+    endUrl: "https://example.com/chapterstart.html"

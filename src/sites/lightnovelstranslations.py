@@ -1,7 +1,8 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from aux_func import *
+from src.BaseParser import BaseParser
+from src.entities.Chapter import Chapter
+from src.aux_func import DEBUG
 from bs4 import BeautifulSoup, Tag
 import re
 
