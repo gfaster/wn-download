@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from src.aux_func import *
 from src.entities.Book import Book
 from src.entities.Section import Section
+from src.entities.UrlRange import UrlRange, UrlRangeSet
 from zipfile import ZipFile
 from epubcheck import EpubCheck
 import pprint
@@ -26,14 +27,20 @@ def copytree(src, dst, symlinks=False, ignore=None):
             shutil.copy2(s, d)
 
 def loadBook(yamlLocation):
-    file = open(yamlLocation)
+    file = open(yamlLocation, 'r')
     defintion = yaml.load(file, Loader=yaml.SafeLoader)
     bookDefintion = Book(defintion['title'])
     for section in defintion['sections']:
+        # builds the start and end url pairs
+        if 'subsections' in section:
+            ur_set = UrlRangeSet(tuple( [UrlRange(sub_sect['startUrl'], sub_sect['endUrl']) for sub_sect in section['subsections']] ))
+        else:
+            # assert type(section) is dict, f'{type(section) = }'
+            ur_set = UrlRangeSet( (UrlRange(section['startUrl'], section['endUrl']),) )
+
         bookDefintion.append(Section(
             section['name'],
-            section['startUrl'],
-            section['endUrl']
+            ur_set
         ))
     return bookDefintion
 

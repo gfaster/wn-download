@@ -70,8 +70,7 @@ class BaseParser(object):
 			del tag['style']
 
 
-		# TODO: Support images
-		# get rid of all img tags
+		# Load images
 		if self.include_images:
 			for tag in self.c_soup.find_all('img'):
 				img = None
@@ -105,7 +104,6 @@ class BaseParser(object):
 			out = out and tag.name in ('div', 'span', 'b', 'em', 'strong', 'i', 'a')
 			out = out and len(tag.get_text(strip = True)) == 0
 			return out
-
 		for tag in self.c_soup.find_all(empty_div):
 			if self.include_images and tag.img is not None:
 				tag.unwrap()

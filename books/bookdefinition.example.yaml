@@ -3,4 +3,10 @@ title: "Book Title"
 sections:
   - name: "Section Name"
     startUrl: "https://example.com/chapterstart.html"
-    endUrl: "https://example.com/chapterstart.html"
+    endUrl: "https://example.com/chapterend.html"
+  - name: "Section2 Name"
+    subsections: # for inconsistensies in sites, lack of navigation, etc
+    - startUrl: "https://example.com/chapterstart.html"
+      endUrl: "https://example.com/chapterend.html"
+    - startUrl: "https://example.com/chapterstart.html"
+      endUrl: "https://example.com/chapterend.html"

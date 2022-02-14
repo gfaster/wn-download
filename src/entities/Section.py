@@ -8,12 +8,12 @@ from src.sites.wuxiaWorld import *
 from src.sites.isekaiLunatic import *
 from src.sites.lightnovelstranslations import *
 from src.sites.skythewood import *
-from src.aux_func import DEBUG
+from src.entities.UrlRange import *
+from src.aux_func import DEBUG, wait_timer
 @dataclass(order=True)
 class Section(object):
     title: str
-    first_chapter_url: str = field(repr=False)
-    final_chapter_url: str = field(repr=False)
+    url_ranges: UrlRangeSet = field(repr=False)
     chapter_list: list = field(repr=False, init=False)
     file_title: str = field(init=False)
     images: set = field(init=False, repr=False, hash=False)
@@ -23,8 +23,10 @@ class Section(object):
 
         self.chapter_list = list()
         self.images = set()
-        assert self.first_chapter_url != "", "no first chapter url"
-        assert self.final_chapter_url != "", "no final chapter url"
+        assert self.url_ranges.ranges
+        for u_range in self.url_ranges.ranges:
+            assert u_range.startUrl != "", "no first chapter url"
+            assert u_range.endUrl != "", "no final chapter url"
 
     def get_images(self):
         for chapter in self.chapter_list:
@@ -32,8 +34,7 @@ class Section(object):
         return self.images
 
     def generate_html(self) -> str:
-        url = self.first_chapter_url
-        assert url != "", "url is blank"
+        
         html = """<?xml version="1.0" encoding="UTF-8"?>
 				<!DOCTYPE html>
 				<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en"
@@ -44,28 +45,32 @@ class Section(object):
 					</head><body>""".format(self.title)
         count = 1
         max_count = 3000
-        parser_type = self.get_parser(url)
+        
         if DEBUG:
         	max_count = 5
+        for u_range in self.url_ranges.ranges:
+            url = u_range.startUrl
+            assert url != "", "start url is blank"
+            parser_type = self.get_parser(url)
 
-        while url is not None and count <= max_count:
+            while url is not None and count <= max_count:
 
-            parser = parser_type(load_site(url=url), count)
-            next_url = parser.get_next_cptr_url()
+                parser = parser_type(load_site(url=url), count)
+                next_url = parser.get_next_cptr_url()
 
-            chapter = parser.get_content()
-            assert len(chapter.content) > 0
-            html += f"<section id=\"{chapter.ghash()}\">"
-            html += chapter.content
-            html += "</section>"
+                chapter = parser.get_content()
+                assert len(chapter.content) > 0
+                html += f"<section id=\"{chapter.ghash()}\">"
+                html += chapter.content
+                html += "</section>"
 
-            assert len(html) < 4000000, "Section is too long"
+                assert len(html) < 4000000, "Section is too long"
 
-            self.chapter_list.append(chapter)
-            if url == self.final_chapter_url:
-                break
-            url = next_url
-            count += 1
+                self.chapter_list.append(chapter)
+                if url == u_range.endUrl:
+                    break
+                url = next_url
+                count += 1
         html += "</body></html>"
         # print(html)
         return html
@@ -104,9 +109,9 @@ def load_site(url=""):
             try:
                 ret = urllib.request.urlopen(req).read().decode("UTF-8")
                 continue_flag = True
-            except:
+            except Exception as e:
                 tries_left -= 1
-                print(f"FAILED TO LOAD: {url}")
+                print(f"FAILED TO LOAD: {url}: Error: {e}")
             if tries_left <= 0:
                 raise Exception("ran out of attempts")
 

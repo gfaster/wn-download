@@ -19,7 +19,7 @@ def zipdir(path, ziph):
 
 def wait_timer(seconds, msg="waiting..."):
 	for i in range(seconds, 0, -1):
-		print(f"{msg} ({i})    ", end="\r")
+		print(f"{msg} ({i})                        ", end="\r")
 		time.sleep(1)
 
 # wrap a beautifulSoup tag with wrap_in tag

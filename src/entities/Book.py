@@ -27,6 +27,7 @@ class Book(object):
 		for section in self.sections:
 			images |= section.get_images()
 		return images
+		
 	def gen_nav(self):
 		# <?xml version="1.0" encoding="utf-8"?>
 		# had this xml line in there but it didn't like it?
