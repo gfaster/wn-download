@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 import urllib
+from pathlib import Path
 from src.Sanitizer import file_san
 
 from src.Sanitizer import *
@@ -8,18 +9,20 @@ from src.sites.wuxiaWorld import *
 from src.sites.isekaiLunatic import *
 from src.sites.lightnovelstranslations import *
 from src.sites.skythewood import *
+from src.sites.ncode import *
 from src.entities.UrlRange import *
-from src.aux_func import DEBUG, wait_timer
+from src.aux_func import DEBUG, wait_timer, setup_cache
 @dataclass(order=True)
 class Section(object):
     title: str
     url_ranges: UrlRangeSet = field(repr=False)
+    lang: str = field(default = 'en', repr=False)
     chapter_list: list = field(repr=False, init=False)
     file_title: str = field(init=False)
     images: set = field(init=False, repr=False, hash=False)
 
     def __post_init__(self):
-        self.file_title = '_' + file_san(self.title).replace(" ", "_")
+        self.file_title = '_' + file_san(self.title, self.lang)
 
         self.chapter_list = list()
         self.images = set()
@@ -89,23 +92,26 @@ class Section(object):
         return ret
 
 
+
 def load_site(url=""):
     ret = ""
+    setup_cache()
+
     try:
         # try and get the file from the cache if it exists
-        f = open(Path(f"cache/{url_to_str_san(url)}.html"),
+        f = open(Path(f"cache/pages/{url_to_str_san(url)}.html"),
                  "r", encoding='utf-8')
         print(f"found {url_to_str_san(url)} in cache")
         ret = f.read()
         f.close()
-    except:
+    except FileNotFoundError:
         continue_flag = False
         tries_left = 5
         while not continue_flag:
             wait_timer(10)
-            print("loading up ", url)
+            print(f"loading page: {url=!r}")
             req = urllib.request.Request(
-                url, headers={'User-Agent': 'Mozilla/5.0 (epub scraper)'})
+                url, headers={'User-Agent': 'Mozilla/5.0 (epubbot scraper)'})
             try:
                 ret = urllib.request.urlopen(req).read().decode("UTF-8")
                 continue_flag = True
@@ -115,7 +121,7 @@ def load_site(url=""):
             if tries_left <= 0:
                 raise Exception("ran out of attempts")
 
-        f = open(Path(f"cache/{url_to_str_san(url)}.html"),
+        f = open(Path(f"cache/pages/{url_to_str_san(url)}.html"),
                  "w", encoding='utf-8')
         f.write(ret)
         f.close()

@@ -7,15 +7,17 @@ import re
 from src.aux_func import DEBUG
 
 
-class IsekaiLunatic(BaseParser):
+class Ncode(BaseParser):
 	prints = 1
 	def __init__(self, htmldoc, chapternum):
-		super(IsekaiLunatic, self).__init__(htmldoc, chapternum)
+		super(Ncode, self).__init__(htmldoc, chapternum)
 		self.include_images = True
 
-		# if IsekaiLunatic.prints > 0:
-		# 	print(self.c_soup.prettify())
-		# 	IsekaiLunatic.prints -= 1
+	def _set_c_soup(self):
+		self.c_soup = self.soup.find(id="novel_honbun") # 本文 = text body
+		del self.c_soup['id']
+		self.c_soup['class'] = "entry-content"
+		assert self.c_soup
 
 	def _is_next_cptr_link(tag):
 		if tag.string == None:
@@ -25,26 +27,27 @@ class IsekaiLunatic(BaseParser):
 		out = out and tag.name == u"a"								# tag is <a>
 		out = out and len(tag.contents) <= 1						# tag has no children
 		out = out and len(tag.string) < 30							# tag isn't too long (to reduce searching)
-		out = out and re.search(r"(?i)next ?chapter", tag.string)	# tag contents contain next chapter
+		out = out and re.search(r"次へ >>", tag.string)			# tag contents contain next chapter
 		return out
 
 
 	def get_next_cptr_url(self):
-		link = self.c_soup.find_all(IsekaiLunatic._is_next_cptr_link)
+		search_soup = self.soup.find(id="novel_contents")
+		link = search_soup.find_all(Ncode._is_next_cptr_link)
 		
 		if len(link) == 0:
 			if DEBUG:
 				print("no next chapter")
 			return None
 
+		out = f"https://ncode.syosetu.com{link[-1]['href']}"
+
 		if DEBUG:
-			print ("Next Chapter: ", link[-1]['href'])
-		return link[-1]['href']
+			print ("Next Chapter: ", out)
+		return out
 
 	def _get_title(self):
-		out = self.soup.title.string
-		out = re.sub(r' ?(–|(-+)|\|) ?Reigokai:.*', '', out)
-		out = re.sub(r'^.{0,15} – ', '', out)
+		out = self.soup.find(class_="novel_subtitle").string
 		return out
 
 
@@ -60,30 +63,13 @@ class IsekaiLunatic(BaseParser):
 		return out
 
 	def cleanup_content(self):
-		# remove resize element
-		for tag in self.c_soup.find_all('img'):
-			tag['src'] = re.sub(r"resize=.+",r"\?",tag['src'])
 		super().cleanup_content()
 
-		for sharelink in self.c_soup.find_all('div', class_='sharedaddy'):
-			sharelink.decompose()
-
-		for sharelink in self.c_soup.find_all('div', class_='wp-dark-mode-switcher'):
-			sharelink.decompose()
+		for tag in self.c_soup.find_all('p'):
+			del tag['id']
 
 		for tag in self.c_soup.find_all('blockquote'):
 			print(f"removing blockquote containing: {tag.get_text()}")
 			tag.decompose()
-
-		for tag in self.c_soup.find_all('p'):
-			is_nav = False
-			for child in tag.contents:
-				if child.string == None:
-					continue
-				if isinstance(child, Tag) and re.match(r'(?i)(next)|(previous) chapter', child.string):
-					is_nav = True
-			if is_nav:
-				tag.decompose()
-				break
 
 

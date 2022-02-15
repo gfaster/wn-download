@@ -4,3 +4,6 @@ html5lib
 beautifulsoup4
 lxml
 pyyaml
+sudachipy
+sudachidict_core
+git+https://github.com/morenosan/jcconv@40f42f8efe76c6d0d63fb51c99e5de3bcbd0b7b2#egg=jcconv

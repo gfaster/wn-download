@@ -27,10 +27,16 @@ def copytree(src, dst, symlinks=False, ignore=None):
             shutil.copy2(s, d)
 
 def loadBook(yamlLocation):
-    file = open(yamlLocation, 'r')
-    defintion = yaml.load(file, Loader=yaml.SafeLoader)
-    bookDefintion = Book(defintion['title'])
-    for section in defintion['sections']:
+    file = open(yamlLocation, 'r', encoding='utf8')
+    definition = yaml.load(file, Loader=yaml.SafeLoader)
+    bookDefinition = Book(definition['title'])
+    lang = definition['lang'] if ('lang' in definition) else 'en'
+
+    if 'picture' in definition and definition['picture']:
+        bookDefinition.set_cover_image(Path(definition['picture']))
+
+
+    for section in definition['sections']:
         # builds the start and end url pairs
         if 'subsections' in section:
             ur_set = UrlRangeSet(tuple( [UrlRange(sub_sect['startUrl'], sub_sect['endUrl']) for sub_sect in section['subsections']] ))
@@ -38,11 +44,12 @@ def loadBook(yamlLocation):
             # assert type(section) is dict, f'{type(section) = }'
             ur_set = UrlRangeSet( (UrlRange(section['startUrl'], section['endUrl']),) )
 
-        bookDefintion.append(Section(
+        bookDefinition.append(Section(
             section['name'],
-            ur_set
+            ur_set,
+            lang
         ))
-    return bookDefintion
+    return bookDefinition
 
 
 def generate(book: Book, location: Path):
@@ -50,7 +57,7 @@ def generate(book: Book, location: Path):
     print("clearing the tmp folder...")
     if not Path("tmp").is_dir():
        Path("tmp").mkdir()
-    if not Path("tmp/epub"):
+    if not Path("tmp/epub").is_dir():
        Path("tmp/epub").mkdir()
     if Path("tmp/epub/EPUB").is_dir():
     	shutil.rmtree(Path("tmp/epub/EPUB"))
@@ -72,16 +79,23 @@ def generate(book: Book, location: Path):
     # copying images
     for image in book.get_images():
         shutil.copy(Path(f"cache/images/{image}"), Path("tmp/epub/EPUB/images/"))
+    cover = book.get_cover_image()
+    if cover:
+        assert cover.suffix in ('.jpeg', '.jpg', '.png'), f"{cover.name} is not valid image type"
+        shutil.copy(book.get_cover_image(), Path(f"tmp/epub/EPUB/images/cover{cover.suffix}"))
+
+
     # create the nav file
     out = book.gen_nav()
     with open(Path("tmp/epub/EPUB/nav.xhtml"), "w", encoding="utf-8") as file:
         file.write(out)
 
-    # generate package.opf and toc.ncx
+    # generate package.opf 
     out = book.modify_opf()
     with open(Path("tmp/epub/EPUB/package.opf"), "w", encoding="utf-8") as file:
         file.write(out)
 
+    #generate toc.ncx
     out = book.modify_ncx()
     with open(Path("tmp/epub/EPUB/toc.ncx"), "w", encoding="utf-8") as file:
         file.write(out)
@@ -105,12 +119,34 @@ def generate(book: Book, location: Path):
 
     print("Generated volume!")
 
+def main():
+    generation_target = loadBook(sys.argv[1])
+    if not DEBUG:
+        generate(generation_target,
+                 location=Path("out/"))
+    else:
+        # print([section.first_chapter_url for section in generation_target])
+        generation_target.title = "Debug Book"
+        generate(generation_target, location=Path("test/"))
 
-generation_target = loadBook(sys.argv[1])
-if not DEBUG:
-    generate(generation_target,
-             location=Path("out/"))
-else:
-    # print([section.first_chapter_url for section in generation_target])
-    generation_target.title = "Debug Book"
-    generate(generation_target, location=Path("test/"))
+def main_perf():
+    assert PERF_TEST
+    import cProfile
+    import pstats
+
+    with cProfile.Profile() as pr:
+        main()
+
+    print('\n --- STATS ---')
+    stats = pstats.Stats(pr)
+    stats.sort_stats(pstats.SortKey.TIME)
+    stats.print_stats()
+    stats.dump_stats(filename='test/stats.prof')
+
+
+if __name__ == '__main__':
+    if PERF_TEST:
+        main_perf()
+    else:
+        main()
+        

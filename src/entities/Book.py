@@ -10,10 +10,11 @@ class Book(object):
 		super(Book, self).__init__()
 		self.title = file_san(title)
 		self.sections = list()
+		self._cover_image = None
 
 	def append(self, section:Section):
 		assert isinstance(section, Section)
-		assert section.file_title not in [s.file_title for s in self.sections], "non-unique title"
+		assert section.file_title not in [s.file_title for s in self.sections], f"{section.file_title=} (non-unique title)"
 		self.sections.append(section)
 
 	def __iter__(self):
@@ -87,6 +88,14 @@ class Book(object):
 		# out += footer
 
 		return soup.prettify()
+
+	def set_cover_image(self, image: Path):
+		assert self._cover_image is None, f"{self._cover_image=!s} and does not need to be re-set"
+		assert image.is_file(), f"{image=!s} does not exist"
+		self._cover_image = image
+
+	def get_cover_image(self):
+		return self._cover_image
 
 	def modify_ncx(self):
 		soup = None
