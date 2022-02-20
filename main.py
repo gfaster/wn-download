@@ -72,7 +72,7 @@ def generate(book: Book, location: Path):
     # create the main file
     print("creating the core files...")
     for section in book:
-        print(f"tmp/epub/EPUB/{section.file_title}.xhtml")
+        print(f"-- New Section -- tmp/epub/EPUB/{section.file_title}.xhtml")
         sectionPath = Path(f"tmp/epub/EPUB/{section.file_title}.xhtml")
         with open(sectionPath, "w", encoding="utf-8") as file:
             file.write(section.generate_html())
@@ -140,7 +140,7 @@ def main_perf():
     print('\n --- STATS ---')
     stats = pstats.Stats(pr)
     stats.sort_stats(pstats.SortKey.TIME)
-    stats.print_stats()
+    # stats.print_stats()
     stats.dump_stats(filename='test/stats.prof')
 
 

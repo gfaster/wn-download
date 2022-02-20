@@ -7,7 +7,7 @@ import requests
 import uuid
 import src.Sanitizer
 
-DEBUG = True
+DEBUG = False
 STRICT_LANG = True
 PERF_TEST = False
 

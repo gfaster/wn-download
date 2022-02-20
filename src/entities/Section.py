@@ -79,7 +79,6 @@ class Section(object):
         return html
 
     def get_parser(self, url):
-        print(url)
         c_url = get_site(url).casefold()
         c_sites = [x.casefold() for x in sites]
         # print(f"Site is: {c_url}")
