@@ -31,18 +31,20 @@ class BaseParser(object):
 		out = Chapter(number = self.chapternum, title = self.soup.title.string, content = self.c_soup.prettify(), images = self.images)
 		return out
 
-	def cleanup_content(self):
-		if self.has_cleaned:
-			return
 
+
+	def _handle_scripts(self):
 		# get rid of all scripts
 		while self.c_soup.script is not None:
 			self.c_soup.script.decompose()
+
+	def _handle_iframes(self):
 		# Remove Iframes as most ereaders won't have internet
 		while self.c_soup.iframe is not None:
 			print(f"Removed iframe in {self.chapternum}")
 			self.c_soup.iframe.decompose()
-		
+
+	def _handle_italics(self):
 		# convert style italics to html tags
 		def style_italic(tag):
 			out = True
@@ -53,7 +55,7 @@ class BaseParser(object):
 		for tag in self.c_soup.find_all(style_italic):
 			tag.wrap(self.soup.new_tag("i"))
 
-
+	def _handle_bolds(self):
 		# convert style bold to html tags
 		def style_bold(tag):
 			out = True
@@ -64,12 +66,12 @@ class BaseParser(object):
 		for tag in self.c_soup.find_all(style_bold):
 			tag.wrap(self.soup.new_tag("b"))
 
-
+	def _handle_remaining_style(self):
 		# get rid of all style tags
 		for tag in self.c_soup.find_all(True, attrs={"style": True}):
 			del tag['style']
 
-
+	def _handle_images(self):
 		# Load images
 		if self.include_images:
 			for tag in self.c_soup.find_all('img'):
@@ -88,16 +90,14 @@ class BaseParser(object):
 
 					print(f'failed to get image at' + tag.get('src'))
 					raise e
-
-				
+	
 		else:
 			for tag in self.c_soup.find_all('img'):
 				if DEBUG:
 					print('removed image')
 				tag.decompose()
 
-
-
+	def _handle_empty_tags(self):
 		# get rid of empty tags
 		def empty_div(tag):
 			out = True
@@ -110,10 +110,24 @@ class BaseParser(object):
 			else:
 				tag.decompose()
 
-
+	def _handle_br_tags(self):
 		# we use <p> tags, so we don't need line breaks
 		for tag in self.c_soup.find_all('br'):
 			tag.decompose()
 
+	# @run_once
+	def cleanup_content(self):
+		if self.has_cleaned:
+			return
+
+		self._handle_scripts()
+		self._handle_iframes()
+		self._handle_italics()
+		self._handle_bolds()
+		self._handle_remaining_style()
+		self._handle_images()
+		self._handle_br_tags()
+
 		self.has_cleaned = True
+
 

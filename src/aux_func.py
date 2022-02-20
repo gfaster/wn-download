@@ -132,3 +132,13 @@ def load_image(url) -> str: #returns filename string with extension, located in 
 			img_file.write(chunk)
 
 	return file_name
+
+# from https://stackoverflow.com/a/4104188/
+# this won't work in instances where a function can only run once per class
+def run_once(f):
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            wrapper.has_run = True
+            return f(*args, **kwargs)
+    wrapper.has_run = False
+    return wrapper
